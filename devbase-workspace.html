@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>devbase — ruang kerja</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e13;
+    --surface: #11161d;
+    --surface-raised: #161d26;
+    --border: #232b36;
+    --text-primary: #e8edf3;
+    --text-muted: #7c8896;
+    --text-faint: #4b5563;
+    --accent: #3ddc97;
+    --accent-dim: #1f6b4f;
+    --gold: #f2b632;
+    --danger: #e5645a;
+    --shadow: 0 8px 24px rgba(0,0,0,0.35);
+    --radius: 14px;
+    --mono: 'JetBrains Mono', monospace;
+    --display: 'Space Grotesk', sans-serif;
+    --body: 'Inter', sans-serif;
+  }
+  html[data-theme="light"] {
+    --bg: #f5f6f4;
+    --surface: #ffffff;
+    --surface-raised: #fbfbfa;
+    --border: #e2e5e1;
+    --text-primary: #12181f;
+    --text-muted: #5b6572;
+    --text-faint: #98a1ab;
+    --accent: #16a06a;
+    --accent-dim: #d3f2e4;
+    --gold: #b8791c;
+    --danger: #c73e34;
+    --shadow: 0 8px 24px rgba(20,25,30,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: var(--body);
+    transition: background 0.3s ease, color 0.3s ease;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+  button, select, input, textarea { font-family: inherit; }
+  ::-webkit-scrollbar { width: 9px; height: 9px; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+
+  .screen { display: none; height: 100vh; }
+  .screen.active { display: flex; flex-direction: column; }
+
+  /* ================= NAV ================= */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 22px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; font-family: var(--display); font-weight: 700; font-size: 17px; letter-spacing: -0.02em; cursor: pointer; }
+  .logo-mark {
+    width: 26px; height: 26px; border-radius: 7px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 13px; color: #08130e; font-weight: 700;
+  }
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+  .theme-toggle {
+    width: 42px; height: 24px; border-radius: 20px;
+    background: var(--surface-raised); border: 1px solid var(--border);
+    position: relative; cursor: pointer;
+  }
+  .theme-toggle::after {
+    content: '☀'; position: absolute; top: 2px; left: 2px;
+    width: 18px; height: 18px; border-radius: 50%; background: var(--gold);
+    display: flex; align-items: center; justify-content: center; font-size: 10px;
+    transition: transform 0.25s cubic-bezier(.4,0,.2,1); color: #2b1f00;
+  }
+  html[data-theme="dark"] .theme-toggle::after { content: '☾'; background: var(--accent); transform: translateX(18px); color: #08130e; }
+
+  .avatar-btn {
+    width: 34px; height: 34px; border-radius: 9px; border: 1px solid var(--border);
+    background: linear-gradient(135deg, var(--accent-dim), var(--surface-raised));
+    color: var(--accent); font-family: var(--display); font-weight: 700; font-size: 13px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+  .logout-btn {
+    font-family: var(--mono); font-size: 11.5px; color: var(--text-muted);
+    background: transparent; border: 1px solid var(--border); border-radius: 8px;
+    padding: 7px 12px; cursor: pointer; transition: all 0.15s ease;
+  }
+  .logout-btn:hover { color: var(--danger); border-color: var(--danger); }
+
+  /* ================= LOGIN SCREEN ================= */
+  #screen-login { align-items: center; justify-content: center; }
+  .login-card {
+    width: 100%; max-width: 360px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 32px 28px; box-shadow: var(--shadow);
+  }
+  .login-card .logo { justify-content: center; margin-bottom: 6px; font-size: 20px; }
+  .login-sub { text-align: center; font-size: 12.5px; color: var(--text-faint); font-family: var(--mono); margin-bottom: 26px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 11.5px; color: var(--text-muted); margin-bottom: 6px; font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.03em; }
+  .field input {
+    width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 9px;
+    color: var(--text-primary); padding: 11px 13px; font-size: 14px; outline: none;
+  }
+  .field input:focus { border-color: var(--accent); }
+  .login-btn {
+    width: 100%; margin-top: 6px; background: var(--accent); color: #08130e; border: none;
+    border-radius: 9px; padding: 12px; font-family: var(--display); font-weight: 600; font-size: 14px;
+    cursor: pointer; transition: filter 0.15s ease;
+  }
+  .login-btn:hover { filter: brightness(1.08); }
+  .login-note { margin-top: 14px; text-align: center; font-size: 11px; color: var(--text-faint); font-family: var(--mono); }
+  .login-hint { margin-top: 18px; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; font-size: 11.5px; color: var(--text-muted); font-family: var(--mono); }
+
+  /* ================= PROJECTS SCREEN ================= */
+  #screen-projects .body-wrap { flex: 1; overflow-y: auto; padding: 28px 26px 60px; max-width: 980px; margin: 0 auto; width: 100%; }
+  .tabs { display: flex; gap: 4px; margin-bottom: 24px; border-bottom: 1px solid var(--border); }
+  .tab-btn {
+    background: transparent; border: none; color: var(--text-muted); font-family: var(--display);
+    font-weight: 600; font-size: 13.5px; padding: 10px 4px; margin-right: 22px; cursor: pointer;
+    border-bottom: 2px solid transparent; transition: all 0.15s ease;
+  }
+  .tab-btn.active { color: var(--text-primary); border-bottom-color: var(--accent); }
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+
+  .pane-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 16px; }
+  .pane-head h2 { font-family: var(--display); font-size: 19px; font-weight: 600; }
+  .pane-head span { font-family: var(--mono); font-size: 11px; color: var(--text-faint); }
+
+  .proj-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
+  .proj-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 18px; cursor: pointer; transition: all 0.15s ease; box-shadow: var(--shadow);
+  }
+  .proj-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .proj-icon {
+    width: 36px; height: 36px; border-radius: 9px; background: var(--surface-raised);
+    border: 1px solid var(--border); display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); color: var(--accent); font-size: 15px; margin-bottom: 12px;
+  }
+  .proj-card h3 { font-family: var(--display); font-size: 14.5px; font-weight: 600; margin-bottom: 5px; }
+  .proj-card p { font-size: 12px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4; }
+  .proj-meta { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 10.5px; color: var(--text-faint); }
+
+  /* leaderboard reused */
+  .board { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+  .row { display: grid; grid-template-columns: 40px 1fr 120px; align-items: center; gap: 14px; padding: 13px 18px; border-bottom: 1px solid var(--border); cursor: pointer; }
+  .row:last-child { border-bottom: none; }
+  .row:hover { background: var(--surface-raised); }
+  .row.head-row { cursor: default; padding: 10px 18px; }
+  .row.head-row:hover { background: transparent; }
+  .row.head-row span { font-family: var(--mono); font-size: 10.5px; color: var(--text-faint); text-transform: uppercase; }
+  .rank { font-family: var(--mono); font-weight: 700; font-size: 13.5px; color: var(--text-faint); text-align: center; }
+  .rank.top1 { color: var(--gold); font-size: 16px; }
+  .who { display: flex; align-items: center; gap: 11px; min-width: 0; }
+  .who-avatar { width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, var(--accent-dim), var(--surface-raised)); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-family: var(--display); font-weight: 700; font-size: 12px; color: var(--accent); flex-shrink: 0; }
+  .who-name { font-weight: 600; font-size: 13.5px; }
+  .who-commits { font-family: var(--mono); font-size: 10.5px; color: var(--text-faint); margin-top: 1px; }
+  .pay { font-family: var(--mono); font-weight: 600; font-size: 13px; text-align: right; }
+  .total-bar { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; background: var(--surface-raised); border-top: 1px solid var(--border); }
+  .total-bar .label { font-family: var(--mono); font-size: 10.5px; color: var(--text-muted); }
+  .total-bar .amount { font-family: var(--display); font-weight: 700; font-size: 17px; color: var(--gold); }
+
+  /* ================= WORKSPACE SCREEN ================= */
+  #screen-workspace { flex-direction: column; }
+  .ws-toolbar {
+    display: flex; align-items: center; gap: 10px; padding: 10px 18px;
+    border-bottom: 1px solid var(--border); background: var(--surface); flex-shrink: 0;
+  }
+  .ws-back { background: transparent; border: 1px solid var(--border); color: var(--text-muted); border-radius: 7px; padding: 7px 11px; font-size: 12px; cursor: pointer; }
+  .ws-back:hover { color: var(--text-primary); }
+  .breadcrumb { font-family: var(--mono); font-size: 12px; color: var(--text-muted); }
+  .breadcrumb b { color: var(--text-primary); }
+  .ws-spacer { flex: 1; }
+  .ws-btn {
+    display: flex; align-items: center; gap: 6px; background: var(--surface-raised); border: 1px solid var(--border);
+    color: var(--text-primary); border-radius: 7px; padding: 7px 12px; font-size: 12px; cursor: pointer; transition: all 0.15s ease;
+  }
+  .ws-btn:hover { border-color: var(--accent); }
+  .ws-btn.primary { background: var(--accent); color: #08130e; border-color: var(--accent); font-weight: 600; }
+  .ws-btn.primary:hover { filter: brightness(1.08); }
+
+  .ws-body { flex: 1; display: flex; overflow: hidden; }
+  .ws-sidebar {
+    width: 230px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border);
+    overflow-y: auto; padding: 12px 8px;
+  }
+  .tree-node { user-select: none; }
+  .tree-row {
+    display: flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: 6px;
+    cursor: pointer; font-size: 12.5px; color: var(--text-muted); white-space: nowrap;
+  }
+  .tree-row:hover { background: var(--surface-raised); color: var(--text-primary); }
+  .tree-row.active-file { background: var(--accent-dim); color: var(--text-primary); }
+  .tree-row .caret { font-size: 9px; width: 10px; color: var(--text-faint); flex-shrink: 0; }
+  .tree-row .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .dot-js { background: #f2c94c; } .dot-css { background: #56b6ff; } .dot-html { background: #ff8a5c; }
+  .dot-json { background: #9aa5b1; } .dot-md { background: #c792ea; } .dot-img { background: #7ee8b8; }
+  .tree-row .unsaved { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); margin-left: auto; flex-shrink: 0; }
+  .tree-children { padding-left: 16px; }
+  .folder-icon { color: var(--text-faint); flex-shrink: 0; font-size: 12px; }
+
+  .ws-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
+  .empty-state {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    color: var(--text-faint); gap: 8px;
+  }
+  .empty-state .big { font-size: 34px; opacity: 0.5; }
+  .empty-state p { font-family: var(--mono); font-size: 12.5px; }
+
+  .editor-tab {
+    display: flex; align-items: center; gap: 8px; padding: 9px 16px; border-bottom: 1px solid var(--border);
+    background: var(--surface); flex-shrink: 0; font-family: var(--mono); font-size: 12.5px;
+  }
+  .editor-tab .unsaved-flag { width: 7px; height: 7px; border-radius: 50%; background: var(--gold); }
+  .editor-wrap { flex: 1; display: flex; overflow: hidden; }
+  .gutter {
+    width: 46px; flex-shrink: 0; background: var(--surface); text-align: right; padding: 14px 8px 14px 0;
+    font-family: var(--mono); font-size: 12.5px; line-height: 1.6; color: var(--text-faint); overflow: hidden;
+    border-right: 1px solid var(--border);
+  }
+  .code-area {
+    flex: 1; background: var(--bg); color: var(--text-primary); border: none; outline: none; resize: none;
+    font-family: var(--mono); font-size: 12.5px; line-height: 1.6; padding: 14px; white-space: pre; overflow: auto;
+  }
+
+  /* toast */
+  .toast-wrap { position: fixed; bottom: 20px; right: 20px; z-index: 100; display: flex; flex-direction: column; gap: 8px; }
+  .toast {
+    background: var(--surface); border: 1px solid var(--accent); color: var(--text-primary);
+    padding: 10px 16px; border-radius: 9px; font-family: var(--mono); font-size: 12px;
+    box-shadow: var(--shadow); opacity: 0; transform: translateY(8px); transition: all 0.25s ease;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+
+  /* profile modal */
+  .overlay { position: fixed; inset: 0; background: rgba(5,7,10,0.6); backdrop-filter: blur(3px); display: none; align-items: center; justify-content: center; z-index: 90; padding: 20px; }
+  .overlay.open { display: flex; }
+  .profile-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; max-width: 380px; width: 100%; padding: 26px; box-shadow: var(--shadow); position: relative; }
+  .close-btn { position: absolute; top: 16px; right: 16px; width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text-muted); cursor: pointer; }
+  .profile-top { display: flex; align-items: center; gap: 13px; margin-bottom: 18px; }
+  .profile-avatar { width: 50px; height: 50px; border-radius: 13px; background: linear-gradient(135deg, var(--accent-dim), var(--surface-raised)); display: flex; align-items: center; justify-content: center; font-family: var(--display); font-weight: 700; font-size: 19px; color: var(--accent); border: 1px solid var(--border); }
+  .profile-name { font-family: var(--display); font-weight: 700; font-size: 17px; }
+  .profile-rank { font-family: var(--mono); font-size: 11.5px; color: var(--gold); margin-top: 2px; }
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 9px; }
+  .stat-box { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 11px; text-align: center; }
+  .stat-box b { display: block; font-family: var(--mono); font-size: 15px; }
+  .stat-box span { font-size: 10px; color: var(--text-faint); text-transform: uppercase; }
+
+  /* ---- monthly payload budget card ---- */
+  .budget-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px 22px; margin-bottom: 18px; box-shadow: var(--shadow);
+  }
+  .budget-top { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; }
+  .budget-top h3 { font-family: var(--display); font-size: 15px; font-weight: 600; }
+  .budget-top span { font-family: var(--mono); font-size: 11px; color: var(--text-faint); }
+  .budget-bar-track { height: 9px; border-radius: 6px; background: var(--bg); border: 1px solid var(--border); overflow: hidden; margin-bottom: 10px; }
+  .budget-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--gold)); border-radius: 6px; transition: width 0.4s ease; }
+  .budget-foot { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 12px; }
+  .budget-foot .used { color: var(--text-primary); font-weight: 600; }
+  .budget-foot .left { color: var(--accent); font-weight: 600; }
+
+  /* ---- add project card ---- */
+  .add-card {
+    background: transparent; border: 1.5px dashed var(--border); border-radius: 12px;
+    padding: 18px; cursor: pointer; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 8px; color: var(--text-faint); transition: all 0.15s ease; min-height: 148px;
+  }
+  .add-card:hover { border-color: var(--accent); color: var(--accent); }
+  .add-card .plus { font-size: 22px; font-family: var(--display); }
+  .add-card span { font-family: var(--mono); font-size: 11.5px; }
+
+  /* ---- badges on project card ---- */
+  .proj-card { position: relative; }
+  .cloud-badge { position: absolute; top: 14px; right: 14px; font-size: 14px; }
+  .cloud-badge.synced { color: var(--accent); }
+  .cloud-badge.unsynced { color: var(--text-faint); opacity: 0.6; }
+  .mini-avatar {
+    width: 17px; height: 17px; border-radius: 5px; background: var(--accent-dim); border: 1.5px solid var(--surface);
+    display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 700;
+    color: var(--accent); font-family: var(--display);
+  }
+  .badge-row { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+  .own-chip {
+    font-family: var(--mono); font-size: 10px; padding: 2px 7px; border-radius: 5px;
+    background: var(--surface-raised); border: 1px solid var(--border); color: var(--text-muted);
+  }
+  .own-chip.team { color: var(--gold); border-color: var(--gold); }
+
+  .collab-wrap { position: relative; display: flex; align-items: center; gap: 6px; }
+  .collab-stack { display: flex; cursor: pointer; position: relative; }
+  .collab-stack > .mini-avatar { margin-left: -5px; }
+  .collab-stack > .mini-avatar:first-child { margin-left: 0; }
+  .collab-tooltip {
+    position: absolute; bottom: 130%; left: 0; min-width: 175px; background: var(--surface-raised);
+    border: 1px solid var(--border); border-radius: 9px; padding: 9px; box-shadow: var(--shadow);
+    opacity: 0; visibility: hidden; transform: translateY(4px); transition: all 0.15s ease; z-index: 25;
+  }
+  .collab-stack:hover .collab-tooltip { opacity: 1; visibility: visible; transform: translateY(0); }
+  .tooltip-title { font-family: var(--mono); font-size: 9.5px; color: var(--text-faint); text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.04em; }
+  .tooltip-row { font-size: 11.5px; padding: 3px 0; display: flex; align-items: center; gap: 7px; color: var(--text-primary); white-space: nowrap; }
+  .tooltip-row .mini-avatar { margin: 0; }
+
+  .add-person-btn {
+    width: 19px; height: 19px; border-radius: 6px; border: 1px dashed var(--border); background: transparent;
+    color: var(--text-faint); font-size: 12px; line-height: 1; cursor: pointer; display: flex;
+    align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.15s ease;
+  }
+  .add-person-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ---- share / add-person modal ---- */
+  .share-card { max-width: 400px; }
+  .suggest-list { max-height: 190px; overflow-y: auto; border: 1px solid var(--border); border-radius: 9px; margin-bottom: 16px; background: var(--bg); }
+  .suggest-row { display: flex; align-items: center; gap: 9px; padding: 9px 11px; cursor: pointer; border-bottom: 1px solid var(--border); transition: background 0.15s ease; }
+  .suggest-row:last-child { border-bottom: none; }
+  .suggest-row:hover { background: var(--surface-raised); }
+  .suggest-row .mini-avatar { margin: 0; flex-shrink: 0; }
+  .suggest-meta { flex: 1; min-width: 0; }
+  .suggest-name { font-size: 12.5px; font-weight: 600; }
+  .suggest-email { font-family: var(--mono); font-size: 10.5px; color: var(--text-faint); }
+  .suggest-add { font-family: var(--mono); font-size: 10.5px; color: var(--accent); flex-shrink: 0; }
+  .suggest-empty { padding: 14px; text-align: center; font-family: var(--mono); font-size: 11.5px; color: var(--text-faint); }
+
+  .chips-label { font-family: var(--mono); font-size: 10.5px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.03em; }
+  .chips-wrap { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 18px; min-height: 30px; }
+  .chips-empty { font-family: var(--mono); font-size: 11.5px; color: var(--text-faint); }
+  .share-chip { display: flex; align-items: center; gap: 6px; background: var(--surface-raised); border: 1px solid var(--border); border-radius: 20px; padding: 4px 9px 4px 4px; font-size: 12px; }
+  .share-chip .mini-avatar { margin: 0; }
+  .chip-remove { background: transparent; border: none; color: var(--text-faint); cursor: pointer; font-size: 11px; padding: 0; }
+  .chip-remove:hover { color: var(--danger); }
+
+  /* ---- collaborator detail modal ---- */
+  .detail-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .detail-row:last-child { border-bottom: none; }
+  .mini-avatar-lg { width: 36px; height: 36px; border-radius: 9px; background: var(--accent-dim); display: flex; align-items: center; justify-content: center; font-family: var(--display); font-weight: 700; font-size: 13px; color: var(--accent); flex-shrink: 0; }
+  .detail-name { font-weight: 600; font-size: 13.5px; }
+  .detail-email { font-family: var(--mono); font-size: 11px; color: var(--text-faint); margin-top: 1px; }
+  .detail-empty { font-family: var(--mono); font-size: 12px; color: var(--text-faint); padding: 8px 0; }
+  .edit-share-btn { width: 100%; margin-top: 14px; background: var(--surface-raised); border: 1px solid var(--border); color: var(--text-primary); border-radius: 9px; padding: 11px; font-family: var(--display); font-weight: 600; font-size: 13px; cursor: pointer; }
+  .edit-share-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ---- modal form controls (add project) ---- */
+  .modal-title { font-family: var(--display); font-weight: 700; font-size: 17px; margin-bottom: 18px; }
+  .own-toggle { display: flex; gap: 8px; }
+  .own-toggle button {
+    flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 9px; padding: 10px;
+    color: var(--text-muted); font-size: 12.5px; cursor: pointer; font-family: var(--body); transition: all 0.15s ease;
+  }
+  .own-toggle button.selected { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+  .collab-field { display: none; margin-top: 12px; }
+  .collab-field.show { display: block; }
+  .submit-btn {
+    width: 100%; margin-top: 6px; background: var(--accent); color: #08130e; border: none;
+    border-radius: 9px; padding: 12px; font-family: var(--display); font-weight: 600; font-size: 14px; cursor: pointer;
+  }
+  .submit-btn:hover { filter: brightness(1.08); }
+
+  input[type=file] { display: none; }
+
+  /* ---- drag & drop folder upload ---- */
+  .ws-body { position: relative; }
+  .drop-hint {
+    position: absolute; inset: 0; z-index: 40; display: none;
+    align-items: center; justify-content: center; flex-direction: column; gap: 10px;
+    background: rgba(61, 220, 151, 0.08); backdrop-filter: blur(2px);
+    border: 2px dashed var(--accent); margin: 8px; border-radius: 14px;
+  }
+  .drop-hint.active { display: flex; }
+  .drop-hint .icon { font-size: 30px; }
+  .drop-hint p { font-family: var(--mono); font-size: 13px; color: var(--accent); }
+  .drop-hint span { font-family: var(--mono); font-size: 11px; color: var(--text-muted); }
+
+  /* ---- push result modal ---- */
+  .result-card { max-width: 380px; text-align: center; padding: 30px 26px; }
+  .result-icon {
+    width: 56px; height: 56px; border-radius: 50%; margin: 0 auto 16px;
+    display: flex; align-items: center; justify-content: center; font-size: 26px;
+  }
+  .result-icon.ok { background: var(--accent-dim); color: var(--accent); }
+  .result-icon.fail { background: rgba(229, 100, 90, 0.15); color: var(--danger); }
+  .result-title { font-family: var(--display); font-weight: 700; font-size: 18px; margin-bottom: 6px; }
+  .result-desc { font-family: var(--mono); font-size: 12px; color: var(--text-muted); margin-bottom: 18px; line-height: 1.6; }
+  .result-link {
+    display: block; background: var(--bg); border: 1px solid var(--border); border-radius: 9px;
+    padding: 11px 14px; font-family: var(--mono); font-size: 12.5px; color: var(--accent);
+    text-decoration: none; margin-bottom: 14px; word-break: break-all; transition: border-color 0.15s ease;
+  }
+  .result-link:hover { border-color: var(--accent); }
+  .result-actions { display: flex; gap: 8px; }
+  .result-actions button {
+    flex: 1; border-radius: 9px; padding: 11px; font-family: var(--display); font-weight: 600;
+    font-size: 13px; cursor: pointer; border: 1px solid var(--border); background: var(--surface-raised); color: var(--text-primary);
+  }
+  .result-actions button.primary { background: var(--accent); color: #08130e; border-color: var(--accent); }
+  .result-actions button.primary:hover { filter: brightness(1.08); }
+
+  @media (max-width: 720px) {
+    .ws-sidebar { position: absolute; z-index: 10; height: 100%; }
+    .proj-grid { grid-template-columns: 1fr 1fr; }
+  }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+
+<!-- ================= LOGIN ================= -->
+<div class="screen active" id="screen-login">
+  <div class="login-card">
+    <div class="logo"><div class="logo-mark">&gt;_</div>devbase</div>
+    <div class="login-sub">masuk untuk narik project terbaru</div>
+    <div class="field">
+      <label>Nama</label>
+      <input type="text" id="loginName" placeholder="nama lo" value="Budi Santoso">
+    </div>
+    <div class="field">
+      <label>Session ID</label>
+      <input type="password" id="loginSession" placeholder="kode akses" value="••••••••">
+    </div>
+    <button class="login-btn" id="loginBtn">Masuk &amp; pull project</button>
+    <div class="login-note">otomatis pull data terbaru saat masuk</div>
+    <div class="login-hint">ℹ saat logout, semua sesi &amp; cache lokal otomatis dibersihkan</div>
+  </div>
+</div>
+
+<!-- ================= PROJECTS ================= -->
+<div class="screen" id="screen-projects">
+  <div class="topbar">
+    <div class="logo"><div class="logo-mark">&gt;_</div>devbase</div>
+    <div class="topbar-right">
+      <button class="theme-toggle" id="themeToggle1" aria-label="ganti tema"></button>
+      <button class="avatar-btn" id="avatarBtn"></button>
+      <button class="logout-btn" id="logoutBtn">Logout</button>
+    </div>
+  </div>
+  <div class="body-wrap">
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="proj">Project</button>
+      <button class="tab-btn" data-tab="board">Leaderboard</button>
+    </div>
+
+    <div class="tab-pane active" id="pane-proj">
+      <div class="pane-head"><h2>Project lo</h2><span id="projCount">— project</span></div>
+      <div class="proj-grid" id="projGrid"></div>
+    </div>
+
+    <div class="tab-pane" id="pane-board">
+      <div class="pane-head"><h2>Leaderboard</h2><span>berdasarkan yang cair</span></div>
+
+      <div class="budget-card">
+        <div class="budget-top"><h3>CAIRR~~!! Bulan Ini — <span id="budgetMonth"></span></h3><span id="budgetPct"></span></div>
+        <div class="budget-bar-track"><div class="budget-bar-fill" id="budgetFill"></div></div>
+        <div class="budget-foot">
+          <span>terpakai <span class="used" id="budgetUsed"></span></span>
+          <span>sisa kuota <span class="left" id="budgetLeft"></span></span>
+        </div>
+      </div>
+
+      <div class="board">
+        <div class="row head-row"><span>#</span><span>developer</span><span style="text-align:right">cair</span></div>
+        <div id="boardBody"></div>
+        <div class="total-bar"><span class="label">TOTAL CAIR BULAN INI</span><span class="amount" id="totalPay">Rp 0</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= WORKSPACE ================= -->
+<div class="screen" id="screen-workspace">
+  <div class="ws-toolbar">
+    <button class="ws-back" id="wsBack">← Project</button>
+    <div class="breadcrumb"><b id="wsProjName"></b> <span id="wsFileName"></span></div>
+    <div class="ws-spacer"></div>
+    <button class="ws-btn" id="pullBtn">⤓ Pull</button>
+    <button class="ws-btn" id="shareBtn">👥 Bagikan</button>
+    <button class="ws-btn" id="uploadBtn">⇧ Upload</button>
+    <input type="file" id="fileInput">
+    <button class="ws-btn" id="downloadBtn">⇩ Download</button>
+    <button class="ws-btn primary" id="pushBtn">↑ Push</button>
+    <button class="theme-toggle" id="themeToggle2" aria-label="ganti tema" style="margin-left:6px"></button>
+  </div>
+  <div class="ws-body">
+    <div class="drop-hint" id="dropHint">
+      <div class="icon">⇊</div>
+      <p>lepas di sini buat upload</p>
+      <span>bisa banyak file & folder sekaligus</span>
+    </div>
+    <div class="ws-sidebar" id="wsTree"></div>
+    <div class="ws-main" id="wsMain">
+      <div class="empty-state">
+        <div class="big">⌘</div>
+        <p>pilih file di sebelah kiri buat mulai ngoding</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="profile-card">
+    <button class="close-btn" id="closeModal">✕</button>
+    <div class="profile-top">
+      <div class="profile-avatar" id="pAvatar"></div>
+      <div><div class="profile-name" id="pName"></div><div class="profile-rank" id="pRank"></div></div>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-box"><b id="pCommits"></b><span>commits</span></div>
+      <div class="stat-box"><b id="pProjects"></b><span>project</span></div>
+      <div class="stat-box"><b id="pPay"></b><span>cair</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="addProjectOverlay">
+  <div class="profile-card">
+    <button class="close-btn" id="closeAddProject">✕</button>
+    <div class="modal-title">Project baru</div>
+    <div class="field">
+      <label>Nama project</label>
+      <input type="text" id="newProjName" placeholder="misal: toko-online-v2">
+    </div>
+    <div class="field">
+      <label>Deskripsi singkat</label>
+      <input type="text" id="newProjDesc" placeholder="buat apa project ini">
+    </div>
+    <div class="field">
+      <label>Kepemilikan</label>
+      <div class="own-toggle">
+        <button type="button" class="selected" id="ownSolo">Solo — punya sendiri</button>
+        <button type="button" id="ownTeam">Tim — bagi ke orang lain</button>
+      </div>
+      <div class="collab-field" id="collabField">
+        <label>Nama rekan kerja (pisah pakai koma)</label>
+        <input type="text" id="newProjCollab" placeholder="Nadia Putri, Fajar Nugroho">
+      </div>
+    </div>
+    <button class="submit-btn" id="createProjectBtn">Buat project</button>
+  </div>
+</div>
+
+<div class="overlay" id="pushResultOverlay">
+  <div class="profile-card result-card">
+    <div class="result-icon" id="resultIcon"></div>
+    <div class="result-title" id="resultTitle"></div>
+    <div class="result-desc" id="resultDesc"></div>
+    <a href="#" target="_blank" class="result-link" id="resultLink" style="display:none"></a>
+    <div class="result-actions">
+      <button id="resultRetry" style="display:none">Coba lagi</button>
+      <button class="primary" id="resultClose">Tutup</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="shareOverlay">
+  <div class="profile-card share-card">
+    <button class="close-btn" id="closeShare">✕</button>
+    <div class="modal-title">Bagikan project</div>
+    <div class="field">
+      <label>Cari nama atau email</label>
+      <input type="text" id="shareSearchInput" placeholder="ketik nama atau email...">
+    </div>
+    <div class="suggest-list" id="shareSuggestions"></div>
+    <div class="chips-label">Akan di-share ke</div>
+    <div class="chips-wrap" id="shareChips"></div>
+    <button class="submit-btn" id="shareSaveBtn">Simpan akses</button>
+  </div>
+</div>
+
+<div class="overlay" id="collabDetailOverlay">
+  <div class="profile-card">
+    <button class="close-btn" id="closeCollabDetail">✕</button>
+    <div class="modal-title" id="collabDetailTitle">Kolaborator</div>
+    <div id="collabDetailList"></div>
+    <button class="edit-share-btn" id="collabDetailEditBtn">+ Kelola siapa yang punya akses</button>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+/* ============ theme (synced across both toggles) ============ */
+const root = document.documentElement;
+function toggleTheme() {
+  root.setAttribute('data-theme', root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+}
+document.getElementById('themeToggle1').addEventListener('click', toggleTheme);
+document.getElementById('themeToggle2').addEventListener('click', toggleTheme);
+
+/* ============ toast ============ */
+function toast(msg) {
+  const wrap = document.getElementById('toastWrap');
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  wrap.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 300); }, 2600);
+}
+
+/* ============ mock data (in-memory only, wiped on logout) ============ */
+const rupiah = n => 'Rp ' + n.toLocaleString('id-ID');
+const initials = name => name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+
+function seedData() {
+  return {
+    budget: { total: 5000000 },
+    nextProjectId: 4,
+    publicUsers: [
+      { name: 'Budi Santoso', email: 'budi.santoso@devbase.id' },
+      { name: 'Siti Amara', email: 'siti.amara@devbase.id' },
+      { name: 'Rafi Pratama', email: 'rafi.pratama@devbase.id' },
+      { name: 'Nadia Putri', email: 'nadia.putri@devbase.id' },
+      { name: 'Fajar Nugroho', email: 'fajar.nugroho@devbase.id' },
+      { name: 'Dewi Lestari', email: 'dewi.lestari@devbase.id' },
+      { name: 'Yusuf Hakim', email: 'yusuf.hakim@devbase.id' },
+      { name: 'Intan Maharani', email: 'intan.maharani@devbase.id' },
+      { name: 'Galih Saputra', email: 'galih.saputra@devbase.id' },
+      { name: 'Putri Ayu', email: 'putri.ayu@devbase.id' },
+    ],
+    devs: [
+      { name: 'Budi Santoso', commits: 142, pay: 710000 },
+      { name: 'Siti Amara', commits: 118, pay: 590000 },
+      { name: 'Rafi Pratama', commits: 97, pay: 485000 },
+      { name: 'Nadia Putri', commits: 84, pay: 420000 },
+      { name: 'Fajar Nugroho', commits: 71, pay: 355000 },
+    ],
+    projects: [
+      {
+        id: 1, name: 'landing-page-budi', desc: 'Landing page portofolio pribadi', updated: '2 jam lalu',
+        owner: 'solo', collaborators: [], synced: true,
+        tree: [
+          { type: 'file', name: 'index.html', ext: 'html', content: '<!DOCTYPE html>\n<html>\n<head>\n  <title>Portofolio</title>\n</head>\n<body>\n  <h1>Halo, ini portofolio gw</h1>\n</body>\n</html>', dirty: false },
+          { type: 'file', name: 'style.css', ext: 'css', content: 'body {\n  font-family: sans-serif;\n  background: #f5f5f5;\n}\n\nh1 {\n  color: #16a06a;\n}', dirty: false },
+          { type: 'folder', name: 'src', open: true, children: [
+            { type: 'file', name: 'asd.js', ext: 'js', content: "function greet(name) {\n  console.log('halo ' + name);\n}\n\ngreet('dunia');", dirty: false },
+            { type: 'file', name: 'utils.js', ext: 'js', content: "export function formatDate(d) {\n  return d.toLocaleDateString('id-ID');\n}", dirty: false },
+          ]},
+          { type: 'folder', name: 'assets', open: false, children: [
+            { type: 'file', name: 'logo.png', ext: 'img', content: null, dirty: false },
+          ]},
+        ]
+      },
+      {
+        id: 2, name: 'toko-online-siti', desc: 'Website toko baju sederhana', updated: '1 hari lalu',
+        owner: 'team', collaborators: ['Nadia Putri', 'Fajar Nugroho'], synced: true,
+        tree: [
+          { type: 'file', name: 'index.html', ext: 'html', content: '<!DOCTYPE html>\n<html>\n<body>\n  <h1>Toko Baju Siti</h1>\n</body>\n</html>', dirty: false },
+          { type: 'folder', name: 'src', open: true, children: [
+            { type: 'file', name: 'cart.js', ext: 'js', content: "let cart = [];\n\nfunction addToCart(item) {\n  cart.push(item);\n}", dirty: false },
+          ]},
+        ]
+      },
+      {
+        id: 3, name: 'game-tebak-angka', desc: 'Mini game latihan logika', updated: '4 hari lalu',
+        owner: 'solo', collaborators: [], synced: false,
+        tree: [
+          { type: 'file', name: 'game.js', ext: 'js', content: "let target = Math.floor(Math.random() * 100);\n\nfunction guess(n) {\n  if (n === target) return 'benar!';\n  return n > target ? 'kegedean' : 'kekecilan';\n}", dirty: false },
+          { type: 'file', name: 'readme.md', ext: 'md', content: '# Game Tebak Angka\n\nLatihan logika dasar JavaScript.', dirty: false },
+        ]
+      },
+    ]
+  };
+}
+
+let state = null;
+let currentUser = null;
+let currentProject = null;
+let currentFile = null;
+
+/* ============ screens ============ */
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+/* ============ LOGIN ============ */
+document.getElementById('loginBtn').addEventListener('click', () => {
+  const name = document.getElementById('loginName').value.trim() || 'Developer';
+  currentUser = { name, avatar: initials(name) };
+  state = seedData();
+  document.getElementById('avatarBtn').textContent = currentUser.avatar;
+  renderProjects();
+  renderBoard();
+  renderBudget();
+  showScreen('screen-projects');
+  toast('⤓ pull selesai — data project terbaru dimuat');
+});
+
+/* ============ LOGOUT (auto clear storage) ============ */
+document.getElementById('logoutBtn').addEventListener('click', () => {
+  state = null; currentUser = null; currentProject = null; currentFile = null;
+  document.getElementById('loginSession').value = '';
+  showScreen('screen-login');
+  toast('🗑 sesi & cache lokal dibersihkan');
+});
+
+/* ============ TABS ============ */
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('pane-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+/* ============ PROJECTS RENDER ============ */
+function renderProjects() {
+  const grid = document.getElementById('projGrid');
+  document.getElementById('projCount').textContent = state.projects.length + ' project';
+
+  const addCardHtml = `
+    <div class="add-card" id="addProjectCard">
+      <div class="plus">+</div>
+      <span>Tambah Project</span>
+    </div>
+  `;
+
+  const cardsHtml = state.projects.map(p => {
+    const collabStackHtml = p.collaborators.length > 0 ? `
+      <div class="collab-stack" data-id="${p.id}">
+        ${p.collaborators.map(c => `<div class="mini-avatar">${initials(c)}</div>`).join('')}
+        <div class="collab-tooltip">
+          <div class="tooltip-title">Kolaborator</div>
+          ${p.collaborators.map(c => `<div class="tooltip-row"><div class="mini-avatar">${initials(c)}</div>${c}</div>`).join('')}
+        </div>
+      </div>` : '';
+    return `
+    <div class="proj-card" data-id="${p.id}">
+      <div class="cloud-badge ${p.synced ? 'synced' : 'unsynced'}" title="${p.synced ? 'sudah di-push ke cloud' : 'belum di-push, masih lokal'}">${p.synced ? '☁' : '⛅'}</div>
+      <div class="proj-icon">📁</div>
+      <h3>${p.name}</h3>
+      <p>${p.desc}</p>
+      <div class="badge-row">
+        <span class="own-chip ${p.owner === 'team' ? 'team' : ''}">${p.owner === 'team' ? 'Tim · ' + p.collaborators.length + ' orang' : 'Solo'}</span>
+        <div class="collab-wrap">
+          ${collabStackHtml}
+          <button class="add-person-btn" data-id="${p.id}" title="Tambah orang">+</button>
+        </div>
+      </div>
+      <div class="proj-meta" style="margin-top:10px"><span>${countFiles(p.tree)} file</span><span>${p.updated}</span></div>
+    </div>
+  `;
+  }).join('');
+
+  grid.innerHTML = addCardHtml + cardsHtml;
+
+  grid.querySelectorAll('.proj-card').forEach(card => {
+    card.addEventListener('click', () => openProject(parseInt(card.dataset.id)));
+  });
+  document.getElementById('addProjectCard').addEventListener('click', openAddProjectModal);
+  grid.querySelectorAll('.collab-stack').forEach(el => {
+    el.addEventListener('click', e => { e.stopPropagation(); openCollabDetail(parseInt(el.dataset.id)); });
+  });
+  grid.querySelectorAll('.add-person-btn').forEach(el => {
+    el.addEventListener('click', e => { e.stopPropagation(); openShareModal(parseInt(el.dataset.id)); });
+  });
+}
+function countFiles(tree) {
+  let n = 0;
+  tree.forEach(node => node.type === 'file' ? n++ : n += countFiles(node.children));
+  return n;
+}
+
+/* ============ BUDGET RENDER ============ */
+const MONTH_NAMES = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+function renderBudget() {
+  const now = new Date();
+  const used = state.devs.reduce((s,d) => s + d.pay, 0);
+  const total = state.budget.total;
+  const left = Math.max(total - used, 0);
+  const pct = Math.min(Math.round((used / total) * 100), 100);
+  document.getElementById('budgetMonth').textContent = MONTH_NAMES[now.getMonth()] + ' ' + now.getFullYear();
+  document.getElementById('budgetPct').textContent = pct + '% terpakai';
+  document.getElementById('budgetFill').style.width = pct + '%';
+  document.getElementById('budgetUsed').textContent = rupiah(used) + ' / ' + rupiah(total);
+  document.getElementById('budgetLeft').textContent = rupiah(left);
+}
+
+/* ============ LEADERBOARD RENDER ============ */
+function renderBoard() {
+  const sorted = [...state.devs].sort((a,b) => b.pay - a.pay);
+  document.getElementById('boardBody').innerHTML = sorted.map((d,i) => `
+    <div class="row">
+      <div class="rank ${i===0?'top1':''}">${i===0?'①':i+1}</div>
+      <div class="who">
+        <div class="who-avatar">${initials(d.name)}</div>
+        <div><div class="who-name">${d.name}</div><div class="who-commits">${d.commits} commits</div></div>
+      </div>
+      <div class="pay">${rupiah(d.pay)}</div>
+    </div>
+  `).join('');
+  document.getElementById('totalPay').textContent = rupiah(state.devs.reduce((s,d) => s + d.pay, 0));
+}
+
+/* ============ PROFILE MODAL ============ */
+document.getElementById('avatarBtn').addEventListener('click', () => {
+  if (!currentUser) return;
+  const me = state.devs.find(d => d.name === currentUser.name) || state.devs[0];
+  const rank = [...state.devs].sort((a,b) => b.pay - a.pay).indexOf(me) + 1;
+  document.getElementById('pAvatar').textContent = currentUser.avatar;
+  document.getElementById('pName').textContent = currentUser.name;
+  document.getElementById('pRank').textContent = 'Peringkat #' + rank;
+  document.getElementById('pCommits').textContent = me.commits;
+  document.getElementById('pProjects').textContent = state.projects.length;
+  document.getElementById('pPay').textContent = rupiah(me.pay).replace('Rp ', '');
+  document.getElementById('overlay').classList.add('open');
+});
+document.getElementById('closeModal').addEventListener('click', () => document.getElementById('overlay').classList.remove('open'));
+document.getElementById('overlay').addEventListener('click', e => { if (e.target.id === 'overlay') e.currentTarget.classList.remove('open'); });
+
+/* ============ ADD PROJECT MODAL ============ */
+let selectedOwnership = 'solo';
+
+function openAddProjectModal() {
+  document.getElementById('newProjName').value = '';
+  document.getElementById('newProjDesc').value = '';
+  document.getElementById('newProjCollab').value = '';
+  selectedOwnership = 'solo';
+  document.getElementById('ownSolo').classList.add('selected');
+  document.getElementById('ownTeam').classList.remove('selected');
+  document.getElementById('collabField').classList.remove('show');
+  document.getElementById('addProjectOverlay').classList.add('open');
+}
+document.getElementById('closeAddProject').addEventListener('click', () => document.getElementById('addProjectOverlay').classList.remove('open'));
+document.getElementById('addProjectOverlay').addEventListener('click', e => { if (e.target.id === 'addProjectOverlay') e.currentTarget.classList.remove('open'); });
+
+document.getElementById('ownSolo').addEventListener('click', () => {
+  selectedOwnership = 'solo';
+  document.getElementById('ownSolo').classList.add('selected');
+  document.getElementById('ownTeam').classList.remove('selected');
+  document.getElementById('collabField').classList.remove('show');
+});
+document.getElementById('ownTeam').addEventListener('click', () => {
+  selectedOwnership = 'team';
+  document.getElementById('ownTeam').classList.add('selected');
+  document.getElementById('ownSolo').classList.remove('selected');
+  document.getElementById('collabField').classList.add('show');
+});
+
+document.getElementById('createProjectBtn').addEventListener('click', () => {
+  const name = document.getElementById('newProjName').value.trim();
+  if (!name) { toast('⚠ nama project wajib diisi'); return; }
+  const desc = document.getElementById('newProjDesc').value.trim() || 'belum ada deskripsi';
+  const collabRaw = document.getElementById('newProjCollab').value.trim();
+  const collaborators = selectedOwnership === 'team' && collabRaw
+    ? collabRaw.split(',').map(s => s.trim()).filter(Boolean)
+    : [];
+
+  const newProject = {
+    id: state.nextProjectId++,
+    name, desc, updated: 'baru saja',
+    owner: selectedOwnership, collaborators,
+    synced: false,
+    tree: []
+  };
+  state.projects.unshift(newProject);
+  renderProjects();
+  document.getElementById('addProjectOverlay').classList.remove('open');
+  toast('📁 project "' + name + '" dibuat — belum di-push ke cloud');
+});
+
+/* ============ COLLABORATOR DETAIL MODAL ============ */
+function openCollabDetail(projectId) {
+  const p = state.projects.find(pr => pr.id === projectId);
+  const list = document.getElementById('collabDetailList');
+  if (p.collaborators.length === 0) {
+    list.innerHTML = `<div class="detail-empty">project ini masih Solo, belum ada yang di-share.</div>`;
+  } else {
+    list.innerHTML = p.collaborators.map(name => {
+      const u = state.publicUsers.find(pu => pu.name === name) || { name, email: '-' };
+      return `
+        <div class="detail-row">
+          <div class="mini-avatar-lg">${initials(name)}</div>
+          <div><div class="detail-name">${u.name}</div><div class="detail-email">${u.email}</div></div>
+        </div>`;
+    }).join('');
+  }
+  document.getElementById('collabDetailTitle').textContent = 'Kolaborator — ' + p.name;
+  document.getElementById('collabDetailEditBtn').dataset.id = projectId;
+  document.getElementById('collabDetailOverlay').classList.add('open');
+}
+document.getElementById('closeCollabDetail').addEventListener('click', () => document.getElementById('collabDetailOverlay').classList.remove('open'));
+document.getElementById('collabDetailOverlay').addEventListener('click', e => { if (e.target.id === 'collabDetailOverlay') e.currentTarget.classList.remove('open'); });
+document.getElementById('collabDetailEditBtn').addEventListener('click', e => {
+  const id = parseInt(e.currentTarget.dataset.id);
+  document.getElementById('collabDetailOverlay').classList.remove('open');
+  openShareModal(id);
+});
+
+/* ============ SHARE MODAL (search & add public users) ============ */
+let shareProjectId = null;
+let shareSelected = [];
+
+function openShareModal(projectId) {
+  const p = state.projects.find(pr => pr.id === projectId);
+  shareProjectId = projectId;
+  shareSelected = p.collaborators.map(name => state.publicUsers.find(u => u.name === name) || { name, email: '' });
+  document.getElementById('shareSearchInput').value = '';
+  renderShareChips();
+  renderShareSuggestions('');
+  document.getElementById('shareOverlay').classList.add('open');
+  document.getElementById('shareSearchInput').focus();
+}
+
+function renderShareSuggestions(query) {
+  const list = document.getElementById('shareSuggestions');
+  const q = query.trim().toLowerCase();
+  const already = new Set(shareSelected.map(u => u.name));
+  let matches = state.publicUsers.filter(u => !already.has(u.name));
+  if (q) matches = matches.filter(u => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q));
+  matches = matches.slice(0, 6);
+
+  if (matches.length === 0) {
+    list.innerHTML = `<div class="suggest-empty">${q ? 'gak ketemu user publik dengan itu' : 'semua user publik udah ditambahin'}</div>`;
+    return;
+  }
+  list.innerHTML = matches.map(u => `
+    <div class="suggest-row" data-name="${u.name}">
+      <div class="mini-avatar">${initials(u.name)}</div>
+      <div class="suggest-meta"><div class="suggest-name">${u.name}</div><div class="suggest-email">${u.email}</div></div>
+      <span class="suggest-add">+ tambah</span>
+    </div>
+  `).join('');
+  list.querySelectorAll('.suggest-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const u = state.publicUsers.find(pu => pu.name === row.dataset.name);
+      shareSelected.push(u);
+      renderShareChips();
+      renderShareSuggestions(document.getElementById('shareSearchInput').value);
+    });
+  });
+}
+
+function renderShareChips() {
+  const wrap = document.getElementById('shareChips');
+  if (shareSelected.length === 0) {
+    wrap.innerHTML = `<div class="chips-empty">belum ada yang ditambahin — cari nama/email di atas</div>`;
+    return;
+  }
+  wrap.innerHTML = shareSelected.map(u => `
+    <div class="share-chip">
+      <div class="mini-avatar">${initials(u.name)}</div><span>${u.name}</span>
+      <button class="chip-remove" data-name="${u.name}">✕</button>
+    </div>
+  `).join('');
+  wrap.querySelectorAll('.chip-remove').forEach(btn => {
+    btn.addEventListener('click', () => {
+      shareSelected = shareSelected.filter(u => u.name !== btn.dataset.name);
+      renderShareChips();
+      renderShareSuggestions(document.getElementById('shareSearchInput').value);
+    });
+  });
+}
+
+document.getElementById('shareSearchInput').addEventListener('input', e => renderShareSuggestions(e.target.value));
+document.getElementById('closeShare').addEventListener('click', () => document.getElementById('shareOverlay').classList.remove('open'));
+document.getElementById('shareOverlay').addEventListener('click', e => { if (e.target.id === 'shareOverlay') e.currentTarget.classList.remove('open'); });
+
+document.getElementById('shareSaveBtn').addEventListener('click', () => {
+  const p = state.projects.find(pr => pr.id === shareProjectId);
+  p.collaborators = shareSelected.map(u => u.name);
+  p.owner = p.collaborators.length > 0 ? 'team' : 'solo';
+  document.getElementById('shareOverlay').classList.remove('open');
+  renderProjects();
+  toast('👥 akses "' + p.name + '" diperbarui — ' + p.collaborators.length + ' orang punya akses');
+});
+
+document.getElementById('shareBtn').addEventListener('click', () => {
+  if (currentProject) openShareModal(currentProject.id);
+});
+
+/* ============ WORKSPACE ============ */
+function openProject(id) {
+  currentProject = state.projects.find(p => p.id === id);
+  currentFile = null;
+  document.getElementById('wsProjName').textContent = currentProject.name;
+  document.getElementById('wsFileName').textContent = '';
+  renderTree();
+  renderEditor();
+  showScreen('screen-workspace');
+}
+
+document.getElementById('wsBack').addEventListener('click', () => {
+  renderProjects();
+  showScreen('screen-projects');
+});
+
+const dotClass = ext => ({ js:'dot-js', css:'dot-css', html:'dot-html', json:'dot-json', md:'dot-md', img:'dot-img' }[ext] || 'dot-json');
+
+function renderTree() {
+  const container = document.getElementById('wsTree');
+  container.innerHTML = '';
+  if (currentProject.tree.length === 0) {
+    container.innerHTML = `<div style="padding:16px 10px; font-family:var(--mono); font-size:11.5px; color:var(--text-faint);">folder kosong — upload file pertama lo</div>`;
+    return;
+  }
+  container.appendChild(buildTreeNodes(currentProject.tree));
+}
+
+function buildTreeNodes(nodes) {
+  const frag = document.createDocumentFragment();
+  nodes.forEach(node => {
+    const wrap = document.createElement('div');
+    wrap.className = 'tree-node';
+    if (node.type === 'folder') {
+      const row = document.createElement('div');
+      row.className = 'tree-row';
+      row.innerHTML = `<span class="caret">${node.open ? '▾' : '▸'}</span><span class="folder-icon">📁</span><span>${node.name}</span>`;
+      row.addEventListener('click', () => { node.open = !node.open; renderTree(); });
+      wrap.appendChild(row);
+      if (node.open) {
+        const childWrap = document.createElement('div');
+        childWrap.className = 'tree-children';
+        childWrap.appendChild(buildTreeNodes(node.children));
+        wrap.appendChild(childWrap);
+      }
+    } else {
+      const row = document.createElement('div');
+      row.className = 'tree-row' + (currentFile === node ? ' active-file' : '');
+      row.innerHTML = `<span class="caret"></span><span class="dot ${dotClass(node.ext)}"></span><span>${node.name}</span>${node.dirty ? '<span class="unsaved"></span>' : ''}`;
+      row.addEventListener('click', () => { currentFile = node; renderTree(); renderEditor(); document.getElementById('wsFileName').textContent = '/ ' + node.name; });
+      wrap.appendChild(row);
+    }
+    frag.appendChild(wrap);
+  });
+  return frag;
+}
+
+function renderEditor() {
+  const main = document.getElementById('wsMain');
+  if (!currentFile) {
+    main.innerHTML = `<div class="empty-state"><div class="big">⌘</div><p>pilih file di sebelah kiri buat mulai ngoding</p></div>`;
+    return;
+  }
+  if (currentFile.ext === 'img') {
+    main.innerHTML = `<div class="empty-state"><div class="big">🖼</div><p>file biner — tidak bisa diedit di sini, pakai download</p></div>`;
+    return;
+  }
+  main.innerHTML = `
+    <div class="editor-tab">${currentFile.dirty ? '<span class="unsaved-flag"></span>' : ''}<span>${currentFile.name}</span></div>
+    <div class="editor-wrap">
+      <div class="gutter" id="gutter"></div>
+      <textarea class="code-area" id="codeArea" spellcheck="false"></textarea>
+    </div>
+  `;
+  const codeArea = document.getElementById('codeArea');
+  const gutter = document.getElementById('gutter');
+  codeArea.value = currentFile.content;
+  syncGutter();
+  codeArea.addEventListener('input', () => { currentFile.content = codeArea.value; currentFile.dirty = true; syncGutter(); renderTree(); });
+  codeArea.addEventListener('scroll', () => { gutter.scrollTop = codeArea.scrollTop; });
+  function syncGutter() {
+    const lines = codeArea.value.split('\n').length;
+    gutter.innerHTML = Array.from({length: lines}, (_,i) => i+1).join('<br>');
+  }
+}
+
+/* ============ pull / push / upload / download ============ */
+document.getElementById('pullBtn').addEventListener('click', () => toast('⤓ pull selesai — sudah versi terbaru'));
+
+document.getElementById('pushBtn').addEventListener('click', () => {
+  if (!currentFile) { toast('⚠ pilih file dulu sebelum push'); return; }
+  attemptPush();
+});
+
+function attemptPush() {
+  const btn = document.getElementById('pushBtn');
+  btn.disabled = true;
+  btn.textContent = '⋯ pushing';
+  setTimeout(() => {
+    btn.disabled = false;
+    btn.innerHTML = '↑ Push';
+    const success = Math.random() > 0.2; // simulasi: sesekali gagal kayak koneksi asli
+    if (success) {
+      currentFile.dirty = false;
+      currentProject.synced = true;
+      currentProject.updated = 'baru saja';
+      renderTree(); renderEditor();
+      document.getElementById('wsFileName').textContent = '/ ' + currentFile.name;
+      const slug = currentProject.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const url = 'https://' + slug + '.devbase.app/' + currentFile.name;
+      showPushResult(true, {
+        title: 'Push berhasil',
+        desc: currentFile.name + ' tersimpan ke ' + currentProject.name + ' dan langsung live.',
+        link: url
+      });
+    } else {
+      showPushResult(false, {
+        title: 'Push gagal',
+        desc: 'Koneksi ke server keputus di tengah jalan. File belum tersimpan, coba push ulang.'
+      });
+    }
+  }, 900);
+}
+
+function showPushResult(success, data) {
+  const icon = document.getElementById('resultIcon');
+  const link = document.getElementById('resultLink');
+  const retry = document.getElementById('resultRetry');
+  icon.className = 'result-icon ' + (success ? 'ok' : 'fail');
+  icon.textContent = success ? '✓' : '✕';
+  document.getElementById('resultTitle').textContent = data.title;
+  document.getElementById('resultDesc').textContent = data.desc;
+  if (success && data.link) {
+    link.style.display = 'block';
+    link.href = data.link;
+    link.textContent = '↗ ' + data.link;
+  } else {
+    link.style.display = 'none';
+  }
+  retry.style.display = success ? 'none' : 'block';
+  document.getElementById('pushResultOverlay').classList.add('open');
+}
+document.getElementById('resultClose').addEventListener('click', () => document.getElementById('pushResultOverlay').classList.remove('open'));
+document.getElementById('resultRetry').addEventListener('click', () => {
+  document.getElementById('pushResultOverlay').classList.remove('open');
+  attemptPush();
+});
+document.getElementById('pushResultOverlay').addEventListener('click', e => { if (e.target.id === 'pushResultOverlay') e.currentTarget.classList.remove('open'); });
+
+document.getElementById('uploadBtn').addEventListener('click', () => document.getElementById('fileInput').click());
+document.getElementById('fileInput').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const ext = file.name.split('.').pop();
+    currentProject.tree.push({ type: 'file', name: file.name, ext: ['js','css','html','json','md'].includes(ext) ? ext : 'json', content: reader.result, dirty: true });
+    renderTree();
+    toast('⇧ ' + file.name + ' ditambahkan ke project');
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+document.getElementById('downloadBtn').addEventListener('click', () => {
+  if (!currentFile || currentFile.ext === 'img') { toast('⚠ pilih file teks dulu'); return; }
+  const blob = new Blob([currentFile.content], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = currentFile.name;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('⇩ ' + currentFile.name + ' diunduh');
+});
+
+/* ============ drag & drop upload (file & folder dari desktop) ============ */
+const TEXT_EXT = ['js','jsx','ts','tsx','css','html','json','md','txt','py','java','c','cpp','yml','yaml','xml','svg'];
+const wsBody = document.querySelector('.ws-body');
+const dropHint = document.getElementById('dropHint');
+let dragCounter = 0;
+
+wsBody.addEventListener('dragenter', e => {
+  e.preventDefault();
+  if (!currentProject) return;
+  dragCounter++;
+  dropHint.classList.add('active');
+});
+wsBody.addEventListener('dragover', e => e.preventDefault());
+wsBody.addEventListener('dragleave', e => {
+  e.preventDefault();
+  dragCounter = Math.max(dragCounter - 1, 0);
+  if (dragCounter === 0) dropHint.classList.remove('active');
+});
+wsBody.addEventListener('drop', async e => {
+  e.preventDefault();
+  dragCounter = 0;
+  dropHint.classList.remove('active');
+  if (!currentProject) return;
+
+  const items = e.dataTransfer.items;
+  if (!items || items.length === 0) return;
+
+  const entries = [];
+  for (let i = 0; i < items.length; i++) {
+    const entry = items[i].webkitGetAsEntry ? items[i].webkitGetAsEntry() : null;
+    if (entry) entries.push(entry);
+  }
+  if (entries.length === 0) {
+    toast('⚠ browser lo gak dukung drag folder — coba tombol Upload biasa');
+    return;
+  }
+
+  toast('⇧ mengunggah ' + entries.length + ' item dari desktop...');
+  const nodes = await Promise.all(entries.map(traverseEntry));
+  currentProject.tree.push(...nodes);
+  currentProject.synced = false;
+  currentFile = null;
+  renderTree();
+  renderEditor();
+  toast('✓ upload selesai — ' + entries.length + ' item ditambahkan ke ' + currentProject.name);
+});
+
+function traverseEntry(entry) {
+  if (entry.isFile) {
+    return new Promise(resolve => {
+      entry.file(file => {
+        const ext = (file.name.split('.').pop() || '').toLowerCase();
+        if (TEXT_EXT.includes(ext)) {
+          const reader = new FileReader();
+          reader.onload = () => resolve({ type: 'file', name: file.name, ext: ext, content: reader.result, dirty: true });
+          reader.onerror = () => resolve({ type: 'file', name: file.name, ext: 'img', content: null, dirty: true });
+          reader.readAsText(file);
+        } else {
+          resolve({ type: 'file', name: file.name, ext: 'img', content: null, dirty: true });
+        }
+      });
+    });
+  } else if (entry.isDirectory) {
+    return new Promise(resolve => {
+      const reader = entry.createReader();
+      const allEntries = [];
+      function readBatch() {
+        reader.readEntries(async batch => {
+          if (batch.length === 0) {
+            const children = await Promise.all(allEntries.map(traverseEntry));
+            resolve({ type: 'folder', name: entry.name, open: true, children });
+          } else {
+            allEntries.push(...batch);
+            readBatch();
+          }
+        });
+      }
+      readBatch();
+    });
+  }
+  return Promise.resolve(null);
+}
+</script>
+</body>
+</html>

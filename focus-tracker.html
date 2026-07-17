@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elegant Focus Tracker</title>
+    <style>
+        :root {
+            /* Warm Blue Theme Colors */
+            --bg-color: #f2f6fa;       
+            --card-bg: #ffffff;        
+            --primary-blue: #4a90e2;   
+            --dark-blue: #1a252f;      
+            --warm-accent: #f39c12;    
+            --success-color: #27ae60;
+            --border-radius: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: #2c3e50;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            transition: background-color 0.8s ease-in-out;
+        }
+
+        /* --- Mode Normal --- */
+        .app-container {
+            background-color: var(--card-bg);
+            width: 100%;
+            max-width: 500px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 8px 30px rgba(74, 144, 226, 0.15);
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            transition: all 0.8s ease-in-out;
+            overflow: hidden;
+        }
+
+        .normal-elements {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            transition: opacity 0.5s ease, transform 0.5s ease;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        header {
+            text-align: center;
+            border-bottom: 2px solid var(--bg-color);
+            padding-bottom: 1rem;
+        }
+
+        h1 { color: var(--primary-blue); font-size: 1.8rem; margin-bottom: 0.5rem; }
+
+        .progress-stats {
+            display: flex;
+            justify-content: space-around;
+            background: var(--bg-color);
+            padding: 10px;
+            border-radius: 8px;
+            font-weight: bold;
+            color: var(--warm-accent);
+        }
+
+        .input-group { display: flex; gap: 10px; }
+
+        input, textarea {
+            padding: 10px; border: 1px solid #dce4ec; border-radius: 6px;
+            outline: none; transition: border 0.3s;
+        }
+        input:focus, textarea:focus { border-color: var(--primary-blue); }
+        input[type="text"] { flex: 2; }
+        input[type="number"] { flex: 1; }
+
+        button {
+            background-color: var(--primary-blue); color: white; border: none;
+            padding: 10px 15px; border-radius: 6px; cursor: pointer;
+            font-weight: bold; transition: background 0.3s, transform 0.1s;
+        }
+        button:hover { background-color: #357abd; }
+        button:active { transform: scale(0.97); }
+
+        .task-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+
+        .task-item {
+            display: flex; flex-direction: column; gap: 8px;
+            padding: 12px 15px; background: var(--bg-color);
+            border-left: 4px solid var(--primary-blue); border-radius: 6px;
+        }
+        .task-item.completed { border-left-color: var(--success-color); }
+        .task-item-top { display: flex; justify-content: space-between; align-items: center; }
+        .task-info strong { display: block; font-size: 1.1rem; }
+        .task-info small { color: #7f8c8d; }
+
+        .btn-start { background-color: var(--warm-accent); }
+        .btn-start:hover { background-color: #e67e22; }
+
+        /* --- Record history shown under a completed task --- */
+        .task-records {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .record-entry {
+            background: var(--card-bg);
+            border: 1px solid #e1e8ef;
+            border-radius: 6px;
+            padding: 8px 10px;
+            font-size: 0.85rem;
+        }
+        .record-entry .record-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+        .record-percentage {
+            font-weight: bold;
+            color: var(--primary-blue);
+            background: var(--bg-color);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+        }
+        .record-date { color: #9aa7b3; font-size: 0.75rem; }
+        .record-note { color: #34495e; }
+        .record-note-label {
+            font-weight: 600;
+            color: #7f8c8d;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 2px;
+        }
+
+        /* --- Mode Fokus (Elegan) --- */
+        body.focus-mode {
+            background-color: var(--dark-blue);
+        }
+
+        body.focus-mode .app-container {
+            background-color: transparent;
+            box-shadow: none;
+            max-width: 100vw;
+            height: 100vh;
+            padding: 0;
+            border-radius: 0;
+            justify-content: center;
+        }
+
+        body.focus-mode .normal-elements {
+            opacity: 0;
+            transform: translateY(-20px);
+            pointer-events: none;
+            position: absolute; /* Lepaskan dari layout agar timer bisa ke tengah */
+        }
+
+        .active-timer-box {
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            text-align: center;
+            height: 100%;
+            width: 100%;
+            opacity: 0;
+            transform: scale(0.95);
+            transition: all 0.8s ease-in-out;
+        }
+
+        /* Saat Mode Fokus Aktif, munculkan Timer */
+        body.focus-mode .active-timer-box {
+            display: flex;
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .active-timer-box h2 {
+            font-size: 1.5rem;
+            font-weight: 300;
+            letter-spacing: 2px;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+
+        .time-display {
+            font-size: 6rem;
+            font-weight: 200;
+            letter-spacing: 4px;
+            margin-bottom: 30px;
+            /* Animasi fokus bernapas yang elegan */
+            animation: breathe 4s infinite ease-in-out;
+        }
+
+        @keyframes breathe {
+            0% { transform: scale(1); text-shadow: 0 0 10px rgba(74, 144, 226, 0.2); }
+            50% { transform: scale(1.05); text-shadow: 0 0 30px rgba(74, 144, 226, 0.8); }
+            100% { transform: scale(1); text-shadow: 0 0 10px rgba(74, 144, 226, 0.2); }
+        }
+
+        /* Logika Hover Tombol Stop yang Elegan */
+        .stop-container {
+            height: 60px; /* Ruang untuk tombol agar layout tidak bergeser */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .btn-stop {
+            background-color: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px 30px;
+            font-weight: 300;
+            letter-spacing: 1px;
+            border-radius: 30px;
+            opacity: 0; /* Tersembunyi secara default */
+            transform: translateY(15px);
+            transition: all 0.4s ease;
+        }
+
+        .btn-stop:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-color: white;
+        }
+
+        /* Ketika kursor bergerak ke area timer, munculkan tombol stop */
+        .active-timer-box:hover .btn-stop {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* --- Completion Record Modal --- */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(26, 37, 47, 0.55);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 1rem;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal-box {
+            background: var(--card-bg);
+            width: 100%;
+            max-width: 420px;
+            border-radius: var(--border-radius);
+            padding: 1.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.1rem;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+            animation: modalPop 0.35s ease;
+        }
+        @keyframes modalPop {
+            from { opacity: 0; transform: translateY(10px) scale(0.97); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .modal-box h3 {
+            color: var(--dark-blue);
+            font-size: 1.3rem;
+        }
+        .modal-box .modal-subtitle {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            margin-top: -0.6rem;
+        }
+        .field-label {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #34495e;
+            display: flex;
+            justify-content: space-between;
+        }
+        .percentage-value {
+            color: var(--primary-blue);
+            font-weight: bold;
+        }
+        input[type="range"] {
+            width: 100%;
+            accent-color: var(--primary-blue);
+            padding: 0;
+            border: none;
+        }
+        textarea {
+            width: 100%;
+            resize: vertical;
+            min-height: 80px;
+            font-family: inherit;
+            font-size: 0.95rem;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        .btn-secondary {
+            background: var(--bg-color);
+            color: #34495e;
+        }
+        .btn-secondary:hover {
+            background: #e3e9ef;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        
+        <!-- Elemen Normal (Disembunyikan saat fokus) -->
+        <div class="normal-elements">
+            <header>
+                <h1>Focus Flow</h1>
+                <div class="progress-stats">
+                    <span id="level-display">Level: 1</span>
+                    <span id="completed-display">Completed: 0</span>
+                </div>
+            </header>
+
+            <form id="task-form" class="input-group">
+                <input type="text" id="task-input" placeholder="What to achieve?" required autocomplete="off">
+                <input type="number" id="time-input" placeholder="Min" min="1" required>
+                <button type="submit">Add</button>
+            </form>
+
+            <ul id="task-list" class="task-list">
+                <!-- Tasks will be injected here via JS -->
+            </ul>
+        </div>
+
+        <!-- Mode Fokus Elegan -->
+        <div id="active-timer-box" class="active-timer-box">
+            <h2 id="current-task-name">Task Name</h2>
+            <div class="time-display" id="time-left">00:00</div>
+            
+            <!-- Dibungkus container agar saat muncul, layout timer tidak melompat -->
+            <div class="stop-container">
+                <button class="btn-stop" onclick="stopTask()">Stop</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Completion Record Modal -->
+    <div id="completion-modal" class="modal-overlay">
+        <div class="modal-box">
+            <div>
+                <h3>Session complete 🎉</h3>
+                <div class="modal-subtitle" id="modal-task-name">Task Name</div>
+            </div>
+
+            <div>
+                <label class="field-label" for="percentage-input">
+                    <span>How much did you complete?</span>
+                    <span class="percentage-value" id="percentage-value-display">100%</span>
+                </label>
+                <input type="range" id="percentage-input" min="0" max="100" step="5" value="100">
+            </div>
+
+            <div>
+                <label class="field-label" for="note-input">Note / next step — what should I do next?</label>
+                <textarea id="note-input" placeholder="e.g. Continue from section 3, review draft with team, take a break first..."></textarea>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="closeCompletionModal()">Skip</button>
+                <button onclick="saveCompletionRecord()">Save record</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- State Management ---
+        let tasks = JSON.parse(localStorage.getItem('focusTasks')) || [];
+        let progress = JSON.parse(localStorage.getItem('focusProgress')) || { level: 1, completedTasks: 0 };
+
+        // Backfill: ensure every task has a records array
+        tasks.forEach(t => { if (!Array.isArray(t.records)) t.records = []; });
+        
+        let timerInterval;
+        let currentActiveTaskId = null;
+        let pendingFinishIndex = null; // task index awaiting a completion record
+
+        // --- DOM Elements ---
+        const taskForm = document.getElementById('task-form');
+        const taskInput = document.getElementById('task-input');
+        const timeInput = document.getElementById('time-input');
+        const taskList = document.getElementById('task-list');
+        const levelDisplay = document.getElementById('level-display');
+        const completedDisplay = document.getElementById('completed-display');
+        
+        const timerBox = document.getElementById('active-timer-box');
+        const currentTaskNameEl = document.getElementById('current-task-name');
+        const timeLeftEl = document.getElementById('time-left');
+
+        // Modal elements
+        const completionModal = document.getElementById('completion-modal');
+        const modalTaskNameEl = document.getElementById('modal-task-name');
+        const percentageInput = document.getElementById('percentage-input');
+        const percentageValueDisplay = document.getElementById('percentage-value-display');
+        const noteInput = document.getElementById('note-input');
+
+        percentageInput.addEventListener('input', () => {
+            percentageValueDisplay.textContent = `${percentageInput.value}%`;
+        });
+
+        // --- Initialize App ---
+        function init() {
+            updateProgressUI();
+            renderTasks();
+        }
+
+        // --- Save Data to Local Storage ---
+        function saveData() {
+            localStorage.setItem('focusTasks', JSON.stringify(tasks));
+            localStorage.setItem('focusProgress', JSON.stringify(progress));
+        }
+
+        // --- Add New Task ---
+        taskForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const newTask = {
+                id: Date.now().toString(),
+                name: taskInput.value,
+                duration: parseInt(timeInput.value), 
+                completed: false,
+                records: []
+            };
+            tasks.push(newTask);
+            saveData();
+            renderTasks();
+            taskInput.value = '';
+            timeInput.value = '';
+        });
+
+        // --- Render Task List ---
+        function renderTasks() {
+            taskList.innerHTML = '';
+            tasks.forEach(task => {
+                const li = document.createElement('li');
+                li.className = `task-item ${task.completed ? 'completed' : ''}`;
+                
+                let buttonHTML = '';
+                if (!task.completed) {
+                    buttonHTML = `<button class="btn-start" onclick="startTask('${task.id}')">Start</button>`;
+                } else {
+                    buttonHTML = `<span style="color:var(--success-color); font-weight:bold;">Done ✓</span>`;
+                }
+
+                const recordsHTML = renderRecordsHTML(task.records);
+
+                li.innerHTML = `
+                    <div class="task-item-top">
+                        <div class="task-info">
+                            <strong>${escapeHTML(task.name)}</strong>
+                            <small>${task.duration} min</small>
+                        </div>
+                        ${buttonHTML}
+                    </div>
+                    ${recordsHTML}
+                `;
+                taskList.appendChild(li);
+            });
+        }
+
+        // --- Render the record history (percentage + note) for a task ---
+        function renderRecordsHTML(records) {
+            if (!records || records.length === 0) return '';
+            const items = records.map(r => `
+                <div class="record-entry">
+                    <div class="record-top">
+                        <span class="record-percentage">${r.percentage}% complete</span>
+                        <span class="record-date">${formatDate(r.date)}</span>
+                    </div>
+                    ${r.note ? `
+                        <div class="record-note-label">Next step</div>
+                        <div class="record-note">${escapeHTML(r.note)}</div>
+                    ` : ''}
+                </div>
+            `).join('');
+            return `<div class="task-records">${items}</div>`;
+        }
+
+        function formatDate(iso) {
+            const d = new Date(iso);
+            return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        }
+
+        function escapeHTML(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // --- Timer Logic (Dengan Animasi Fokus) ---
+        function startTask(taskId) {
+            if (timerInterval) return;
+
+            const taskIndex = tasks.findIndex(t => t.id === taskId);
+            const task = tasks[taskIndex];
+            
+            currentActiveTaskId = task.id;
+            let timeRemaining = task.duration * 60; 
+
+            // UI Updates - Masuk ke Focus Mode
+            document.body.classList.add('focus-mode');
+            currentTaskNameEl.textContent = task.name;
+            updateTimerDisplay(timeRemaining);
+
+            // Beri sedikit delay agar transisi CSS terlihat mulus sebelum timer berjalan
+            setTimeout(() => {
+                timerInterval = setInterval(() => {
+                    timeRemaining--;
+                    updateTimerDisplay(timeRemaining);
+
+                    if (timeRemaining <= 0) {
+                        finishTask(taskIndex);
+                    }
+                }, 1000);
+            }, 800);
+        }
+
+        function stopTask() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+                currentActiveTaskId = null;
+                
+                // Keluar dari Focus Mode
+                document.body.classList.remove('focus-mode');
+            }
+        }
+
+        function finishTask(taskIndex) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+            currentActiveTaskId = null;
+            
+            // Keluar dari Focus Mode
+            document.body.classList.remove('focus-mode');
+
+            // Simpan index task yang sedang menunggu record, lalu buka modal
+            pendingFinishIndex = taskIndex;
+
+            setTimeout(() => {
+                openCompletionModal(tasks[taskIndex]);
+            }, 600);
+        }
+
+        // --- Completion Record Modal Logic ---
+        function openCompletionModal(task) {
+            modalTaskNameEl.textContent = task.name;
+            percentageInput.value = 100;
+            percentageValueDisplay.textContent = '100%';
+            noteInput.value = '';
+            completionModal.classList.add('active');
+        }
+
+        function closeCompletionModal() {
+            // Kalau user skip, tetap tandai task selesai tanpa record detail
+            finalizeTaskCompletion(null, null);
+            completionModal.classList.remove('active');
+        }
+
+        function saveCompletionRecord() {
+            const percentage = parseInt(percentageInput.value);
+            const note = noteInput.value.trim();
+            finalizeTaskCompletion(percentage, note);
+            completionModal.classList.remove('active');
+        }
+
+        function finalizeTaskCompletion(percentage, note) {
+            if (pendingFinishIndex === null) return;
+            const taskIndex = pendingFinishIndex;
+            pendingFinishIndex = null;
+
+            const task = tasks[taskIndex];
+            task.completed = true;
+
+            if (percentage !== null) {
+                task.records.push({
+                    date: new Date().toISOString(),
+                    percentage: percentage,
+                    note: note
+                });
+            }
+
+            progress.completedTasks++;
+            progress.level = Math.floor(progress.completedTasks / 3) + 1;
+
+            saveData();
+            updateProgressUI();
+            renderTasks();
+        }
+
+        function updateTimerDisplay(seconds) {
+            const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const s = (seconds % 60).toString().padStart(2, '0');
+            timeLeftEl.textContent = `${m}:${s}`;
+        }
+
+        // --- Progress UI ---
+        function updateProgressUI() {
+            levelDisplay.textContent = `Level: ${progress.level}`;
+            completedDisplay.textContent = `Completed: ${progress.completedTasks}`;
+        }
+
+        // Mulai aplikasi
+        init();
+    </script>
+</body>
+</html>

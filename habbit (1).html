@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<!--
+============================================================
+ HABBIT — Aktivitas & Pengeluaran (LOCAL STORAGE VERSION)
+============================================================
+ Pure HTML + CSS + inline JS. No Supabase, no server, no build
+ step, no other files needed besides habbit.css sitting next to
+ this file. Every activity/expense you log is saved permanently
+ in THIS BROWSER's localStorage (key: "habbit_local_db_v1") —
+ it survives closing the tab/browser and reopening this file
+ later, but it does NOT sync anywhere else. Clearing your browser
+ data, using a different browser, or opening this file from a
+ different device all start you at zero. Use the Export button
+ (bottom of the history card) to back up your data to a file.
+
+ Same logic/behavior as the Supabase-backed version:
+   - Start a timed activity, stop it later with an optional
+     quantity + unit (e.g. "10 Repetisi").
+   - Log an expense directly (no "running" phase).
+   - Filter history by a specific day/month/year, and by
+     Finance / Aktivitas / Both (F/A/B switch).
+ The only thing that changed is WHERE the data lives.
+============================================================
+-->
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aktivitas &amp; Pengeluaran — Gembel AI PIK (Lokal)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="habbit.css">
+</head>
+<body>
+
+<div class="top">
+  <div class="brand">
+    <div class="brand-mark">GP</div>
+    <div>
+      <div class="brand-txt">Aktivitas &amp; Pengeluaran</div>
+      <div class="brand-sub">GEMBEL AI PIK · LOKAL</div>
+    </div>
+  </div>
+  <div class="top-right">
+    <span class="storage-badge"><span class="dot"></span>Tersimpan di browser ini</span>
+    <div class="who" id="who-click" title="Klik untuk ganti nama">
+      <div class="who-badge" id="who-badge">··</div>
+      <div>
+        <div class="who-name" id="who-name">…</div>
+        <div class="who-sub">Data lokal</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="page-head">
+    <h1>Lo lagi ngapain?</h1>
+    <p>Ketik aktivitasnya, gas — waktu mulai &amp; selesai kecatet otomatis. Kalau ini soal duit keluar, tinggal centang &amp; isi nominalnya.</p>
+  </div>
+
+  <div class="grid">
+    <!-- ================= FORM ================= -->
+    <div class="card">
+      <h2>Aktivitas</h2>
+      <div class="field" id="f-activity" style="margin-top:2px;">
+        <input type="text" id="in-activity" placeholder="Contoh: Main badminton" maxlength="200">
+        <div class="err-text">Ketik dulu aktivitasnya (minimal 3 karakter).</div>
+      </div>
+
+      <label class="check-row" for="in-finance">
+        <input type="checkbox" id="in-finance">
+        <div>
+          <div class="ct-title">Ini keluar duit</div>
+          <div class="ct-sub">Centang kalau aktivitas ini ada pengeluarannya.</div>
+        </div>
+      </label>
+
+      <div class="finance-fields" id="finance-fields">
+        <div class="field" id="f-amount">
+          <label>Nominal</label>
+          <div class="amount-wrap">
+            <span class="prefix">Rp</span>
+            <input type="text" inputmode="numeric" id="in-amount" placeholder="100000">
+          </div>
+          <div class="err-text">Isi nominalnya dalam angka, lebih dari 0.</div>
+        </div>
+        <div class="field" id="f-tag">
+          <label>Kategori (opsional)</label>
+          <input type="text" id="in-tag" placeholder="Contoh: Makan, Transport" maxlength="60">
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-block" id="submit-btn">🚀 Gas, Mulai!</button>
+    </div>
+
+    <!-- ================= RIGHT COLUMN ================= -->
+    <div>
+      <div class="card" style="margin-bottom:20px;">
+        <h2>Sedang berjalan</h2>
+        <p class="hint">Aktivitas kamu yang masih jalan sekarang.</p>
+        <div id="running-list">
+          <div class="empty">Belum ada aktivitas yang lagi jalan.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Riwayat kamu</h2>
+        <div class="filter-row" id="hist-filter">
+          <div class="chip-filter active" data-range="day">Harian</div>
+          <div class="chip-filter" data-range="month">Bulanan</div>
+          <div class="chip-filter" data-range="year">Tahunan</div>
+        </div>
+        <div class="period-picker-row">
+          <input type="date" id="period-day" class="period-input">
+          <input type="month" id="period-month" class="period-input" style="display:none;">
+          <input type="number" id="period-year" class="period-input" style="display:none;" min="2000" max="2100" placeholder="2025">
+        </div>
+        <div class="type-switch" id="hist-type-switch">
+          <button class="type-btn active" data-type="B">B · Semua</button>
+          <button class="type-btn" data-type="A">A · Aktivitas</button>
+          <button class="type-btn" data-type="F">F · Finance</button>
+        </div>
+        <div id="history-list">
+          <div class="empty">Belum ada riwayat di rentang ini.</div>
+        </div>
+
+        <div class="data-tools">
+          <button class="btn-tool" id="export-btn">⬇️ Export backup (.json)</button>
+          <label class="btn-tool" for="import-input" style="display:inline-block;">⬆️ Import backup</label>
+          <input type="file" id="import-input" accept="application/json" style="display:none;">
+          <button class="btn-tool danger" id="reset-btn">🗑️ Hapus semua data</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ============================================================
+     STORAGE — this IS the database. One JSON blob in localStorage:
+       { running: [...], history: [...] }
+     running = habbit_h rows (currently-running activities)
+     history = habbit_d rows (completed activities + expenses)
+     ============================================================ */
+  const DB_KEY = 'habbit_local_db_v1';
+  const PROFILE_KEY = 'habbit_local_profile_name';
+
+  function loadDB() {
+    try {
+      const raw = localStorage.getItem(DB_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) { console.error('DB corrupt, resetting.', e); }
+    return { running: [], history: [] };
+  }
+  function saveDB() {
+    localStorage.setItem(DB_KEY, JSON.stringify(db));
+  }
+  let db = loadDB();
+
+  /* ============================================================
+     HELPERS — ids, dates, formatting, escaping
+     ============================================================ */
+  function newId() {
+    if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
+    return 'id-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+  }
+  function toTimeOfDay(date) {
+    const p = n => String(n).padStart(2, '0');
+    return `${p(date.getHours())}:${p(date.getMinutes())}:${p(date.getSeconds())}`;
+  }
+  function toDateOnly(date) {
+    const p = n => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())}`;
+  }
+
+  const ESCAPE_MAP = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+  function escapeHtml(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, ch => ESCAPE_MAP[ch]); }
+
+  function initials(name) {
+    const parts = String(name || '?').trim().split(/\s+/).slice(0, 2);
+    return parts.map(w => (w[0] ? w[0].toUpperCase() : '')).join('') || '?';
+  }
+  function fmtClock(iso) {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '…';
+    return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+  }
+  function fmtDurationSecs(totalSeconds) {
+    const s = Math.max(0, Math.floor(totalSeconds || 0));
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+    const p = n => String(n).padStart(2, '0');
+    return h > 0 ? `${h}:${p(m)}:${p(sec)}` : `${p(m)}:${p(sec)}`;
+  }
+  function fmtRupiah(n) { return 'Rp' + (Number(n) || 0).toLocaleString('id-ID'); }
+  function fmtRelativeTime(iso) {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    const mins = Math.floor((Date.now() - d.getTime()) / 60000);
+    if (mins < 1) return 'baru saja';
+    if (mins < 60) return `${mins} menit lalu`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs} jam lalu`;
+    const days = Math.floor(hrs / 24);
+    if (days < 7) return `${days} hari lalu`;
+    return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+  function fmtTimeOfDay(t) { return t ? String(t).slice(0, 5) : '…'; }
+
+  /* ============================================================
+     UI GLUE — toast, invalid-field flash, busy-lock on buttons
+     ============================================================ */
+  let toastTimer = null;
+  function showToast(message, type) {
+    const el = document.getElementById('toast');
+    el.textContent = message;
+    el.classList.toggle('err', type === 'err');
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+  }
+  function setFieldInvalid(fieldId, invalid) {
+    const el = document.getElementById(fieldId);
+    el.classList.toggle('invalid', invalid);
+    const err = el.querySelector('.err-text');
+    if (err) err.classList.toggle('show', invalid);
+  }
+  async function withBusy(btn, busyLabel, fn) {
+    if (!btn) return fn();
+    const original = btn.textContent, wasDisabled = btn.disabled;
+    btn.disabled = true; btn.textContent = busyLabel;
+    try { return await fn(); }
+    finally { btn.disabled = wasDisabled; btn.textContent = original; }
+  }
+
+  /* ============================================================
+     "DATA ACCESS LAYER" — same shape/behavior as the Supabase
+     version's fetchRunning/fetchHistory/startActivity/
+     recordExpense/stopActivity, just synchronous over the local
+     `db` object instead of a network round-trip. Validation stays
+     identical (this is the only line of defense now — there's no
+     server-side CHECK constraint behind localStorage).
+     ============================================================ */
+  function fetchRunning() {
+    return [...db.running].sort((a, b) => b.created_at.localeCompare(a.created_at));
+  }
+  function fetchHistory() {
+    return [...db.history].sort((a, b) => b.created_at.localeCompare(a.created_at));
+  }
+
+  function startActivity(activity) {
+    const clean = String(activity || '').trim().slice(0, 200);
+    if (clean.length < 3) throw new Error('Aktivitas minimal 3 karakter.');
+    const now = new Date();
+    const row = {
+      id: newId(), activity: clean,
+      time_start: toTimeOfDay(now), start_date: toDateOnly(now),
+      created_at: now.toISOString(),
+    };
+    db.running.push(row);
+    saveDB();
+    return row;
+  }
+
+  function recordExpense({ activity, financeTag, nominal }) {
+    const clean = String(activity || '').trim().slice(0, 200);
+    if (clean.length < 3) throw new Error('Aktivitas minimal 3 karakter.');
+    const amount = Number(nominal);
+    if (!Number.isFinite(amount) || amount <= 0) throw new Error('Nominal harus angka dan lebih dari 0.');
+    const cleanTag = financeTag ? String(financeTag).trim().slice(0, 60) : null;
+
+    const now = new Date();
+    const today = toDateOnly(now), nowTime = toTimeOfDay(now);
+    const row = {
+      id: newId(), activity: clean,
+      time_start: nowTime, time_end: nowTime, total_second: 0, qty: null, qty_unit: null,
+      finance_flag: true, finance_tag: cleanTag, nominal: amount,
+      start_date: today, end_date: today, created_at: now.toISOString(),
+    };
+    db.history.push(row);
+    saveDB();
+    return row;
+  }
+
+  function stopActivity({ id, qty, unit }) {
+    const idx = db.running.findIndex(r => r.id === id);
+    if (idx === -1) throw new Error('Aktivitas tidak ditemukan (sudah dihentikan?).');
+
+    let cleanQty = null;
+    if (qty !== null && qty !== undefined && qty !== '') {
+      cleanQty = Number(qty);
+      if (!Number.isFinite(cleanQty) || cleanQty <= 0) {
+        throw new Error('Jumlah harus angka lebih dari 0 (atau kosongkan).');
+      }
+    }
+    const cleanUnit = unit ? String(unit).trim().slice(0, 40) : null;
+
+    const running = db.running[idx];
+    const now = new Date();
+    const endDate = toDateOnly(now), endTime = toTimeOfDay(now);
+    const startInstant = new Date(`${running.start_date}T${running.time_start}`).getTime();
+    const endInstant = new Date(`${endDate}T${endTime}`).getTime();
+    const totalSeconds = Math.max(0, Math.round((endInstant - startInstant) / 1000));
+
+    const historyRow = {
+      id: newId(), activity: running.activity,
+      time_start: running.time_start, time_end: endTime, total_second: totalSeconds,
+      qty: cleanQty, qty_unit: cleanUnit,
+      finance_flag: false, finance_tag: null, nominal: null,
+      start_date: running.start_date, end_date: endDate, created_at: now.toISOString(),
+    };
+    db.running.splice(idx, 1);
+    db.history.push(historyRow);
+    saveDB();
+    return historyRow;
+  }
+
+  /* ============================================================
+     STATE — history filter (period + F/A/B type), same rules as
+     the Supabase version's habbit.state.js
+     ============================================================ */
+  const today = new Date();
+  const state = {
+    histPeriodType: 'day',                // 'day' | 'month' | 'year'
+    histPeriodValue: toDateOnly(today),   // 'YYYY-MM-DD' | 'YYYY-MM' | 'YYYY'
+    histType: 'B',                        // 'B' | 'A' | 'F'
+  };
+
+  function startInstant(row) { return new Date(`${row.start_date}T${row.time_start}`).getTime(); }
+
+  function getPeriodBounds(periodType, periodValue) {
+    if (periodType === 'day' && periodValue) {
+      const start = new Date(`${periodValue}T00:00:00`);
+      const end = new Date(`${periodValue}T23:59:59.999`);
+      if (!Number.isNaN(start.getTime())) return [start.getTime(), end.getTime()];
+    }
+    if (periodType === 'month' && periodValue) {
+      const parts = periodValue.split('-').map(Number);
+      const y = parts[0], m = parts[1];
+      if (y && m) return [new Date(y, m - 1, 1).getTime(), new Date(y, m, 0, 23, 59, 59, 999).getTime()];
+    }
+    if (periodType === 'year' && periodValue) {
+      const y = Number(periodValue);
+      if (Number.isFinite(y) && y > 0) return [new Date(y, 0, 1).getTime(), new Date(y, 11, 31, 23, 59, 59, 999).getTime()];
+    }
+    return [-Infinity, Infinity];
+  }
+
+  function getFilteredHistory() {
+    const [start, end] = getPeriodBounds(state.histPeriodType, state.histPeriodValue);
+    return fetchHistory().filter(row => {
+      const t = startInstant(row);
+      if (t < start || t > end) return false;
+      if (state.histType === 'F' && !row.finance_flag) return false;
+      if (state.histType === 'A' && row.finance_flag) return false;
+      return true;
+    });
+  }
+
+  /* ============================================================
+     RENDERING
+     ============================================================ */
+  function renderRunning() {
+    const rows = fetchRunning();
+    const box = document.getElementById('running-list');
+    if (rows.length === 0) { box.innerHTML = '<div class="empty">Belum ada aktivitas yang lagi jalan.</div>'; return; }
+    box.innerHTML = rows.map(r => {
+      const elapsed = Math.floor((Date.now() - new Date(r.created_at).getTime()) / 1000);
+      return `
+      <div class="run-item" data-id="${escapeHtml(r.id)}" data-start="${escapeHtml(r.created_at)}">
+        <div class="run-dot-wrap"><span class="pulse-dot"></span></div>
+        <div class="run-body">
+          <div class="run-activity" title="${escapeHtml(r.activity)}">${escapeHtml(r.activity)}</div>
+          <div class="run-time">mulai ${escapeHtml(fmtClock(r.created_at))}</div>
+          <div class="stop-form" data-stop-form-for="${escapeHtml(r.id)}">
+            <input type="text" inputmode="numeric" class="stop-qty" placeholder="10" maxlength="6">
+            <input type="text" class="stop-unit" placeholder="Repetisi" maxlength="40">
+            <button class="btn-stop-confirm" data-confirm-stop-id="${escapeHtml(r.id)}">✓ Selesai</button>
+            <button class="btn-link-cancel" data-cancel-stop-id="${escapeHtml(r.id)}">Batal</button>
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <div class="run-elapsed mono" data-elapsed>${fmtDurationSecs(elapsed)}</div>
+          <button class="btn btn-stop" style="margin-top:6px;" data-stop-id="${escapeHtml(r.id)}">■ Stop</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function tickRunning() {
+    document.querySelectorAll('.run-item').forEach(el => {
+      const start = new Date(el.dataset.start).getTime();
+      const elapsed = Math.floor((Date.now() - start) / 1000);
+      const out = el.querySelector('[data-elapsed]');
+      if (out) out.textContent = fmtDurationSecs(elapsed);
+    });
+  }
+
+  function showStopForm(id) {
+    const form = document.querySelector(`[data-stop-form-for="${CSS.escape(id)}"]`);
+    const item = form && form.closest('.run-item');
+    if (form) form.classList.add('show');
+    if (item) { const b = item.querySelector('[data-stop-id]'); if (b) b.classList.add('hidden-btn'); }
+    const qtyInput = form && form.querySelector('.stop-qty');
+    if (qtyInput) qtyInput.focus();
+  }
+  function hideStopForm(id) {
+    const form = document.querySelector(`[data-stop-form-for="${CSS.escape(id)}"]`);
+    const item = form && form.closest('.run-item');
+    if (form) form.classList.remove('show');
+    if (item) { const b = item.querySelector('[data-stop-id]'); if (b) b.classList.remove('hidden-btn'); }
+  }
+  function readStopForm(id) {
+    const form = document.querySelector(`[data-stop-form-for="${CSS.escape(id)}"]`);
+    if (!form) return { qty: null, unit: null };
+    const qtyRaw = (form.querySelector('.stop-qty').value || '').trim();
+    const unitRaw = (form.querySelector('.stop-unit').value || '').trim();
+    return { qty: qtyRaw || null, unit: unitRaw || null };
+  }
+
+  function setHistRangeChips(range) {
+    document.querySelectorAll('#hist-filter .chip-filter').forEach(c => c.classList.toggle('active', c.dataset.range === range));
+  }
+  function setPeriodPickerVisibility(periodType) {
+    document.getElementById('period-day').style.display = periodType === 'day' ? '' : 'none';
+    document.getElementById('period-month').style.display = periodType === 'month' ? '' : 'none';
+    document.getElementById('period-year').style.display = periodType === 'year' ? '' : 'none';
+  }
+  function setHistTypeButtons(type) {
+    document.querySelectorAll('#hist-type-switch .type-btn').forEach(b => b.classList.toggle('active', b.dataset.type === type));
+  }
+
+  function renderHistory() {
+    const rows = getFilteredHistory();
+    const box = document.getElementById('history-list');
+    if (rows.length === 0) { box.innerHTML = '<div class="empty">Belum ada riwayat di rentang ini.</div>'; return; }
+    box.innerHTML = rows.map(r => {
+      if (r.finance_flag) {
+        return `
+        <div class="hist-row">
+          <span class="type-pill finance">${escapeHtml((r.finance_tag || 'KELUAR DUIT').toUpperCase())}</span>
+          <div class="hist-main">
+            <div class="hist-title">${escapeHtml(r.activity)}</div>
+            <div class="hist-sub">${escapeHtml(fmtRelativeTime(r.created_at))}</div>
+          </div>
+          <div class="hist-value spend">${fmtRupiah(r.nominal)}</div>
+        </div>`;
+      }
+      return `
+      <div class="hist-row">
+        <span class="type-pill drilling">AKTIVITAS</span>
+        <div class="hist-main">
+          <div class="hist-title">${escapeHtml(r.activity)}</div>
+          <div class="hist-sub">${fmtTimeOfDay(r.time_start)} – ${fmtTimeOfDay(r.time_end)} · ${escapeHtml(fmtRelativeTime(r.created_at))}</div>
+        </div>
+        <div style="text-align:right;">
+          <div class="hist-value dur">${fmtDurationSecs(r.total_second || 0)}</div>
+          ${r.qty != null && r.qty !== '' ? `<span class="hist-qty">${escapeHtml(r.qty)} ${escapeHtml(r.qty_unit || '')}</span>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function toggleFinanceFields(checked) {
+    document.getElementById('finance-fields').classList.toggle('show', checked);
+    const btn = document.getElementById('submit-btn');
+    btn.textContent = checked ? '💸 Gas, Catat!' : '🚀 Gas, Mulai!';
+    btn.classList.toggle('btn-finance', checked);
+    btn.classList.toggle('btn-primary', !checked);
+  }
+  function resetActivityForm() {
+    document.getElementById('in-activity').value = '';
+    document.getElementById('in-amount').value = '';
+    document.getElementById('in-tag').value = '';
+    document.getElementById('in-finance').checked = false;
+    toggleFinanceFields(false);
+  }
+
+  function updateWhoBadge(name) {
+    document.getElementById('who-badge').textContent = initials(name);
+    document.getElementById('who-name').textContent = name;
+  }
+
+  function loadAll() { renderRunning(); renderHistory(); }
+
+  /* ============================================================
+     PROFILE NAME — purely cosmetic, stored locally, click to edit
+     ============================================================ */
+  function getProfileName() { return localStorage.getItem(PROFILE_KEY) || 'Kamu'; }
+  function setProfileName(name) {
+    const clean = String(name || '').trim().slice(0, 60) || 'Kamu';
+    localStorage.setItem(PROFILE_KEY, clean);
+    updateWhoBadge(clean);
+  }
+
+  /* ============================================================
+     DATA TOOLS — export / import / reset (only makes sense
+     because this IS the storage layer, not a mock of one)
+     ============================================================ */
+  function exportBackup() {
+    const payload = { ...db, exportedAt: new Date().toISOString(), app: 'habbit-local' };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `habbit-backup-${toDateOnly(new Date())}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    showToast('Backup diunduh.');
+  }
+  function importBackup(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target.result);
+        if (!Array.isArray(data.running) || !Array.isArray(data.history)) throw new Error('invalid');
+        if (!confirm('Ini akan mengganti SEMUA data yang ada sekarang dengan isi file backup. Lanjutkan?')) return;
+        db = { running: data.running, history: data.history };
+        saveDB();
+        loadAll();
+        showToast('Backup berhasil dipulihkan.');
+      } catch (err) {
+        showToast('File backup tidak valid.', 'err');
+      }
+    };
+    reader.readAsText(file);
+  }
+  function resetAllData() {
+    if (!confirm('Hapus SEMUA aktivitas & riwayat di browser ini? Tindakan ini tidak bisa dibatalkan (kecuali kamu punya backup).')) return;
+    db = { running: [], history: [] };
+    saveDB();
+    loadAll();
+    showToast('Semua data dihapus.');
+  }
+
+  /* ============================================================
+     FORM HANDLERS
+     ============================================================ */
+  async function handleSubmit() {
+    const activity = document.getElementById('in-activity').value.trim();
+    const isFinance = document.getElementById('in-finance').checked;
+    const amountRaw = document.getElementById('in-amount').value.trim();
+    const tagRaw = document.getElementById('in-tag').value.trim();
+
+    let ok = true;
+    if (activity.length < 3) { setFieldInvalid('f-activity', true); ok = false; }
+    let amount = null;
+    if (isFinance) {
+      amount = Number(amountRaw);
+      if (!amountRaw || !Number.isFinite(amount) || amount <= 0) { setFieldInvalid('f-amount', true); ok = false; }
+    }
+    if (!ok) { showToast('Lengkapi dulu isian yang merah ya.', 'err'); return; }
+
+    const btn = document.getElementById('submit-btn');
+    await withBusy(btn, 'Menyimpan…', async () => {
+      try {
+        if (isFinance) recordExpense({ activity, financeTag: tagRaw || null, nominal: amount });
+        else startActivity(activity);
+        resetActivityForm();
+        showToast(isFinance ? 'Pengeluaran tercatat.' : 'Gas, semangat aktivitasnya!');
+        loadAll();
+      } catch (e) {
+        showToast('Gagal simpan: ' + (e.message || 'coba lagi.'), 'err');
+      }
+    });
+  }
+
+  async function handleConfirmStop(id, qty, unit, btn) {
+    await withBusy(btn, 'Menghentikan…', async () => {
+      try {
+        stopActivity({ id, qty, unit });
+        showToast('Aktivitas dihentikan.');
+        loadAll();
+      } catch (e) {
+        showToast('Gagal menghentikan: ' + (e.message || ''), 'err');
+      }
+    });
+  }
+
+  function wireEvents() {
+    document.getElementById('submit-btn').addEventListener('click', handleSubmit);
+    document.getElementById('in-activity').addEventListener('input', () => setFieldInvalid('f-activity', false));
+    document.getElementById('in-amount').addEventListener('input', function () {
+      this.value = this.value.replace(/[^\d]/g, '');
+      setFieldInvalid('f-amount', false);
+    });
+    document.getElementById('in-finance').addEventListener('change', (e) => toggleFinanceFields(e.target.checked));
+
+    document.getElementById('running-list').addEventListener('input', (e) => {
+      if (e.target.matches('.stop-qty')) e.target.value = e.target.value.replace(/[^\d]/g, '');
+    });
+
+    document.getElementById('hist-filter').addEventListener('click', (e) => {
+      const chip = e.target.closest('.chip-filter');
+      if (!chip) return;
+      const periodType = chip.dataset.range;
+      const now = new Date();
+      let periodValue;
+      if (periodType === 'day') {
+        periodValue = document.getElementById('period-day').value || now.toISOString().slice(0, 10);
+        document.getElementById('period-day').value = periodValue;
+      } else if (periodType === 'month') {
+        periodValue = document.getElementById('period-month').value || now.toISOString().slice(0, 7);
+        document.getElementById('period-month').value = periodValue;
+      } else {
+        periodValue = document.getElementById('period-year').value || String(now.getFullYear());
+        document.getElementById('period-year').value = periodValue;
+      }
+      state.histPeriodType = periodType;
+      state.histPeriodValue = periodValue;
+      setHistRangeChips(periodType);
+      setPeriodPickerVisibility(periodType);
+      renderHistory();
+    });
+
+    ['period-day', 'period-month', 'period-year'].forEach(id => {
+      document.getElementById(id).addEventListener('change', (e) => {
+        state.histPeriodValue = e.target.value;
+        renderHistory();
+      });
+    });
+
+    document.getElementById('hist-type-switch').addEventListener('click', (e) => {
+      const btn = e.target.closest('.type-btn');
+      if (!btn) return;
+      state.histType = btn.dataset.type;
+      setHistTypeButtons(btn.dataset.type);
+      renderHistory();
+    });
+
+    document.getElementById('running-list').addEventListener('click', (e) => {
+      const stopBtn = e.target.closest('[data-stop-id]');
+      if (stopBtn) { showStopForm(stopBtn.dataset.stopId); return; }
+      const cancelBtn = e.target.closest('[data-cancel-stop-id]');
+      if (cancelBtn) { hideStopForm(cancelBtn.dataset.cancelStopId); return; }
+      const confirmBtn = e.target.closest('[data-confirm-stop-id]');
+      if (confirmBtn) {
+        const id = confirmBtn.dataset.confirmStopId;
+        const { qty, unit } = readStopForm(id);
+        handleConfirmStop(id, qty, unit, confirmBtn);
+      }
+    });
+
+    document.getElementById('who-click').addEventListener('click', () => {
+      const name = prompt('Nama kamu:', getProfileName());
+      if (name !== null) setProfileName(name);
+    });
+
+    document.getElementById('export-btn').addEventListener('click', exportBackup);
+    document.getElementById('import-input').addEventListener('change', (e) => {
+      if (e.target.files[0]) importBackup(e.target.files[0]);
+      e.target.value = '';
+    });
+    document.getElementById('reset-btn').addEventListener('click', resetAllData);
+  }
+
+  /* ============================================================
+     BOOTSTRAP
+     ============================================================ */
+  document.addEventListener('DOMContentLoaded', () => {
+    updateWhoBadge(getProfileName());
+    wireEvents();
+    document.getElementById('period-day').value = state.histPeriodValue;
+    loadAll();
+    setInterval(tickRunning, 1000);
+  });
+})();
+</script>
+</body>
+</html>
