@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Command Center - QwerTrade Finance</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-dark: #0f172a;
+    --card-bg: #1e293b;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --primary: #3b82f6;
+    --success: #10b981;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+    --border: #334155;
+    --font-sans: 'Inter', sans-serif;
+    --font-head: 'Sora', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  body {
+    background-color: var(--bg-dark);
+    color: var(--text-main);
+    font-family: var(--font-sans);
+    line-height: 1.5;
+    padding: 20px;
+    padding-bottom: 80px;
+  }
+
+  .container { max-width: 1000px; margin: 0 auto; }
+
+  /* Header */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 15px;
+  }
+  .header h1 { font-family: var(--font-head); font-size: 1.5rem; }
+  .header .badge {
+    background: var(--primary);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  /* Grid Layout */
+  .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 20px; }
+  .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 20px; margin-bottom: 20px; }
+  
+  .card {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .card h2 { font-family: var(--font-head); font-size: 1.1rem; margin-bottom: 15px; color: var(--text-muted); }
+
+  /* Circular Progress (Saving Rate) */
+  .circle-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .circle {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    /* 65% tercapai dari target 70% */
+    background: conic-gradient(var(--success) 0% 65%, var(--border) 65% 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    margin-bottom: 15px;
+  }
+  .circle::before {
+    content: "";
+    position: absolute;
+    width: 90px;
+    height: 90px;
+    background-color: var(--card-bg);
+    border-radius: 50%;
+  }
+  .circle-val {
+    position: relative;
+    font-family: var(--font-mono);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-main);
+  }
+  .circle-sub { font-size: 0.85rem; color: var(--text-muted); text-align: center; }
+
+  /* Linear Progress Bar */
+  .progress-wrap { margin-top: 10px; }
+  .progress-bar-bg {
+    width: 100%;
+    height: 10px;
+    background-color: var(--border);
+    border-radius: 5px;
+    overflow: hidden;
+    margin-top: 8px;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background-color: var(--warning);
+    border-radius: 5px;
+  }
+  .progress-stats {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    margin-top: 5px;
+    font-family: var(--font-mono);
+  }
+
+  /* Typography */
+  .val-huge { font-family: var(--font-mono); font-size: 2rem; font-weight: 700; }
+  .val-green { color: var(--success); }
+  .val-red { color: var(--danger); }
+  
+  /* MoM Table */
+  .mom-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .mom-row:last-child { border-bottom: none; }
+  .mom-label { flex: 2; font-weight: 500; }
+  .mom-prev { flex: 1; color: var(--text-muted); text-align: right; font-family: var(--font-mono); font-size: 0.9rem;}
+  .mom-curr { flex: 1; text-align: right; font-family: var(--font-mono); font-weight: 600; font-size: 0.95rem;}
+  .mom-delta { flex: 0.5; text-align: right; font-size: 0.9rem; }
+
+  /* Floating Action Button */
+  .fab {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    background-color: var(--primary);
+    color: white;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.5);
+    cursor: pointer;
+    border: none;
+    transition: transform 0.2s;
+  }
+  .fab:hover { transform: scale(1.1); }
+
+  @media (max-width: 600px) {
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    .val-huge { font-size: 1.5rem; }
+    .header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header class="header">
+    <h1>Long-Term Finance Report</h1>
+    <div class="badge">Mei 2026</div>
+  </header>
+
+  <!-- TOP SECTION: The Pinned HUD -->
+  <div class="grid-3">
+    <!-- Widget 1: Saving Rate -->
+    <div class="card circle-wrap">
+      <h2>Target Saving Rate (70%)</h2>
+      <div class="circle">
+        <div class="circle-val">65%</div>
+      </div>
+      <div class="circle-sub">
+        <span class="val-green">On-Track</span> · Sisa Kuota Operasional:<br>
+        <strong style="font-family: var(--font-mono); color: white;">Rp 2.150.000</strong>
+      </div>
+    </div>
+
+    <!-- Widget 2: Pinned Long Term Goal -->
+    <div class="card">
+      <h2>📌 Pinned: Bangun Rumah Ortu</h2>
+      <div class="val-huge" style="font-size: 1.5rem; margin-top: 10px;">Rp 120 Juta</div>
+      <div style="color: var(--text-muted); font-size: 0.85rem;">Terkumpul dari target Rp 300 Juta</div>
+      
+      <div class="progress-wrap">
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" style="width: 40%;"></div>
+        </div>
+        <div class="progress-stats">
+          <span>Progress</span>
+          <span>40%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Widget 3: The Vault -->
+    <div class="card">
+      <h2>🏦 The Vault (Net Worth)</h2>
+      <div class="val-huge" style="margin-top: 10px;">Rp 450.5M</div>
+      <div style="margin-top: 15px; font-size: 0.9rem;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+          <span style="color: var(--text-muted);">RDN & Ekuitas Saham</span>
+          <span style="font-family: var(--font-mono);">Rp 320.0M</span>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+          <span style="color: var(--text-muted);">Kas Tunai & Deposito</span>
+          <span style="font-family: var(--font-mono);">Rp 130.5M</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MIDDLE SECTION: MoM Battle -->
+  <div class="card" style="margin-bottom: 20px;">
+    <h2>⚔️ Month-over-Month (April vs Mei)</h2>
+    
+    <!-- Pemasukan -->
+    <div style="margin-bottom: 20px;">
+      <h3 style="font-size: 0.95rem; color: var(--success); margin-bottom: 10px;">Total Pemasukan</h3>
+      <div class="mom-row">
+        <div class="mom-label">Gaji Bulanan</div>
+        <div class="mom-prev">15.000.000</div>
+        <div class="mom-curr">15.000.000</div>
+        <div class="mom-delta">-</div>
+      </div>
+      <div class="mom-row">
+        <div class="mom-label">Realized Profit (GOTO/Warrant)</div>
+        <div class="mom-prev">2.500.000</div>
+        <div class="mom-curr">4.200.000</div>
+        <div class="mom-delta val-green">▲ 68%</div>
+      </div>
+    </div>
+
+    <!-- Pengeluaran -->
+    <div>
+      <h3 style="font-size: 0.95rem; color: var(--danger); margin-bottom: 10px;">Total Pengeluaran (Core 30%)</h3>
+      <div class="mom-row">
+        <div class="mom-label">Sewa Kos & Utilitas</div>
+        <div class="mom-prev">2.500.000</div>
+        <div class="mom-curr">2.000.000</div>
+        <div class="mom-delta val-green">▼ 20%</div>
+      </div>
+      <div class="mom-row">
+        <div class="mom-label">Gaya Hidup & Hobi</div>
+        <div class="mom-prev">1.200.000</div>
+        <div class="mom-curr">1.500.000</div>
+        <div class="mom-delta val-red">▲ 25%</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM SECTION: Sinking Funds / Goal Tracker -->
+  <h2 style="font-family: var(--font-head); font-size: 1.2rem; margin: 30px 0 15px 0;">🎯 Sinking Funds Tracker</h2>
+  <div class="grid-2">
+    <!-- Card 1 -->
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="font-size: 1rem;">Dana Darurat</h3>
+        <span style="font-size: 0.8rem; background: var(--border); padding: 2px 8px; border-radius: 10px;">Prioritas 2</span>
+      </div>
+      <div class="progress-wrap" style="margin-top: 15px;">
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" style="width: 80%; background-color: var(--success);"></div>
+        </div>
+        <div class="progress-stats">
+          <span>Terkumpul: 4.8 Bulan</span>
+          <span>Target: 6 Bulan</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2 -->
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="font-size: 1rem;">Amunisi Trading Tambahan</h3>
+        <span style="font-size: 0.8rem; background: var(--border); padding: 2px 8px; border-radius: 10px;">Prioritas 3</span>
+      </div>
+      <div class="progress-wrap" style="margin-top: 15px;">
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" style="width: 20%; background-color: var(--primary);"></div>
+        </div>
+        <div class="progress-stats">
+          <span>Terkumpul: Rp 10 Juta</span>
+          <span>Target: Rp 50 Juta</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Floating Action Button -->
+<button class="fab" title="Log Transaksi Baru">
+  +
+</button>
+
+</body>
+</html>

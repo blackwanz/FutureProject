@@ -149,16 +149,22 @@
         /* --- Mode Fokus (Elegan) --- */
         body.focus-mode {
             background-color: var(--dark-blue);
+            overflow: hidden; /* Prevent page scroll while focus mode is active */
         }
 
         body.focus-mode .app-container {
+            position: fixed; /* Always pinned to the viewport, regardless of scroll position */
+            top: 0;
+            left: 0;
             background-color: transparent;
             box-shadow: none;
+            width: 100vw;
             max-width: 100vw;
             height: 100vh;
             padding: 0;
             border-radius: 0;
             justify-content: center;
+            z-index: 999;
         }
 
         body.focus-mode .normal-elements {
@@ -320,6 +326,44 @@
         .btn-secondary:hover {
             background: #e3e9ef;
         }
+
+        .btn-export {
+            width: 100%;
+            margin-top: 10px;
+            background-color: var(--success-color);
+        }
+        .btn-export:hover {
+            background-color: #219150;
+        }
+
+        .task-list-heading {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            font-size: 0.85rem;
+            color: #7f8c8d;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .task-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 22px;
+            height: 22px;
+            padding: 0 6px;
+            margin-right: 8px;
+            border-radius: 50%;
+            background: var(--primary-blue);
+            color: #fff;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+        .task-item.completed .task-number {
+            background: var(--success-color);
+        }
     </style>
 </head>
 <body>
@@ -334,6 +378,7 @@
                     <span id="level-display">Level: 1</span>
                     <span id="completed-display">Completed: 0</span>
                 </div>
+                <button id="export-btn" type="button" class="btn-export">⬇ Download Report (Excel)</button>
             </header>
 
             <form id="task-form" class="input-group">
@@ -342,6 +387,10 @@
                 <button type="submit">Add</button>
             </form>
 
+            <div class="task-list-heading">
+                <span>Recent Tasks</span>
+                <span id="task-count">0</span>
+            </div>
             <ul id="task-list" class="task-list">
                 <!-- Tasks will be injected here via JS -->
             </ul>
@@ -388,6 +437,7 @@
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script>
         // --- State Management ---
         let tasks = JSON.parse(localStorage.getItem('focusTasks')) || [];
@@ -405,8 +455,10 @@
         const taskInput = document.getElementById('task-input');
         const timeInput = document.getElementById('time-input');
         const taskList = document.getElementById('task-list');
+        const taskCountEl = document.getElementById('task-count');
         const levelDisplay = document.getElementById('level-display');
         const completedDisplay = document.getElementById('completed-display');
+        const exportBtn = document.getElementById('export-btn');
         
         const timerBox = document.getElementById('active-timer-box');
         const currentTaskNameEl = document.getElementById('current-task-name');
@@ -428,6 +480,54 @@
             updateProgressUI();
             renderTasks();
         }
+
+        // --- Export completed tasks (with time completed + remarks) to Excel ---
+        function exportToExcel() {
+            const rows = [];
+            let no = 1;
+
+            tasks.forEach(task => {
+                if (task.records && task.records.length > 0) {
+                    task.records.forEach(r => {
+                        rows.push({
+                            'No': no++,
+                            'Task': task.name,
+                            'Duration (min)': task.duration,
+                            'Completed At': formatDate(r.date),
+                            'Percentage Complete': `${r.percentage}%`,
+                            'Remarks / Next Step': r.note || ''
+                        });
+                    });
+                } else if (task.completed) {
+                    // Completed but skipped the record modal - still include it
+                    rows.push({
+                        'No': no++,
+                        'Task': task.name,
+                        'Duration (min)': task.duration,
+                        'Completed At': '',
+                        'Percentage Complete': '',
+                        'Remarks / Next Step': ''
+                    });
+                }
+            });
+
+            if (rows.length === 0) {
+                alert('No completed tasks yet — finish a task first, then export.');
+                return;
+            }
+
+            const worksheet = XLSX.utils.json_to_sheet(rows);
+            worksheet['!cols'] = [
+                { wch: 5 }, { wch: 28 }, { wch: 14 }, { wch: 20 }, { wch: 18 }, { wch: 40 }
+            ];
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Focus Report');
+
+            const dateStamp = new Date().toISOString().slice(0, 10);
+            XLSX.writeFile(workbook, `focus-tracker-report-${dateStamp}.xlsx`);
+        }
+
+        exportBtn.addEventListener('click', exportToExcel);
 
         // --- Save Data to Local Storage ---
         function saveData() {
@@ -452,10 +552,16 @@
             timeInput.value = '';
         });
 
-        // --- Render Task List ---
+        // --- Render Task List (numbered, most recently added task first) ---
         function renderTasks() {
             taskList.innerHTML = '';
-            tasks.forEach(task => {
+            taskCountEl.textContent = tasks.length;
+
+            // Show every task ("display all"), newest first, each with a running number
+            const orderedTasks = [...tasks].reverse();
+
+            orderedTasks.forEach((task, i) => {
+                const number = tasks.length - i; // Numbering follows original add order (1 = oldest)
                 const li = document.createElement('li');
                 li.className = `task-item ${task.completed ? 'completed' : ''}`;
                 
@@ -471,7 +577,7 @@
                 li.innerHTML = `
                     <div class="task-item-top">
                         <div class="task-info">
-                            <strong>${escapeHTML(task.name)}</strong>
+                            <strong><span class="task-number">${number}</span>${escapeHTML(task.name)}</strong>
                             <small>${task.duration} min</small>
                         </div>
                         ${buttonHTML}
@@ -522,6 +628,7 @@
             let timeRemaining = task.duration * 60; 
 
             // UI Updates - Masuk ke Focus Mode
+            window.scrollTo({ top: 0, behavior: 'instant' }); // Always show the timer immediately, no manual scrolling needed
             document.body.classList.add('focus-mode');
             currentTaskNameEl.textContent = task.name;
             updateTimerDisplay(timeRemaining);

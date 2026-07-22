@@ -1,0 +1,1352 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AS/400 LifeAsia Dev Workspace</title>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    :root {
+        --bg-main: #0f172a;
+        --bg-card: #1e293b;
+        --bg-input: #334155;
+        --bg-input-hover: #3d4c63;
+        --text-main: #f8fafc;
+        --text-muted: #94a3b8;
+        --accent: #38bdf8;
+        --accent-hover: #0ea5e9;
+        --danger: #ef4444;
+        --canvas-bg: #17233a;
+        --border-subtle: #2c3b52;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+        font-family: 'Inter', sans-serif;
+        background-color: var(--bg-main);
+        background-image: radial-gradient(circle at 15% 10%, rgba(56,189,248,0.06), transparent 40%);
+        color: var(--text-main);
+        margin: 0;
+        padding: 20px;
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+    }
+
+    .workspace {
+        display: grid;
+        grid-template-columns: 1fr 1.1fr;
+        gap: 20px;
+        width: 100%;
+        max-width: 1500px;
+        height: calc(100vh - 40px);
+        transition: grid-template-columns 0.25s ease;
+    }
+
+    .panel {
+        background-color: var(--bg-card);
+        padding: 22px 22px 18px;
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        border: 1px solid var(--border-subtle);
+        min-width: 0;
+        transition: padding 0.25s ease;
+    }
+
+    .panel.collapsed { padding: 18px 0; align-items: center; }
+
+    .panel-body { display: flex; flex-direction: column; flex: 1; min-height: 0; width: 100%; }
+    .panel.collapsed .panel-body { display: none; }
+
+    .collapsed-strip {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+        height: 100%;
+        padding-top: 4px;
+    }
+    .panel.collapsed .collapsed-strip { display: flex; }
+
+    .strip-label {
+        writing-mode: vertical-rl;
+        color: var(--accent);
+        font-weight: 700;
+        font-size: 0.85rem;
+        letter-spacing: 0.02em;
+        white-space: nowrap;
+    }
+
+    .minimize-btn {
+        background: var(--bg-input);
+        border: none;
+        color: var(--text-muted);
+        width: 26px;
+        height: 26px;
+        min-height: 26px;
+        border-radius: 6px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.85rem;
+        flex-shrink: 0;
+        transition: all 0.15s ease;
+    }
+    .minimize-btn:hover { background: var(--bg-input-hover); color: var(--text-main); }
+
+    .panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 14px;
+        gap: 10px;
+    }
+
+    h2 {
+        margin: 0;
+        color: var(--accent);
+        font-weight: 700;
+        font-size: 1.3rem;
+        letter-spacing: -0.01em;
+    }
+
+    p.subtitle {
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        margin: 4px 0 0 0;
+    }
+
+    .status-tag {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        min-height: 14px;
+        text-align: right;
+        transition: color 0.2s ease;
+    }
+
+    .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+
+    /* Progress bar */
+    .progress-wrap {
+        margin-bottom: 16px;
+    }
+    .progress-track {
+        height: 6px;
+        background: var(--bg-input);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--accent), #7dd3fc);
+        border-radius: 4px;
+        transition: width 0.3s ease;
+    }
+    .progress-label {
+        font-size: 0.72rem;
+        color: var(--text-muted);
+        margin-top: 5px;
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Checklist Styles */
+    .input-group {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+
+    input[type="text"] {
+        flex: 1;
+        padding: 11px 14px;
+        border: 2px solid transparent;
+        border-radius: 8px;
+        background-color: var(--bg-input);
+        color: var(--text-main);
+        font-family: inherit;
+        font-size: 0.9rem;
+        outline: none;
+        transition: all 0.2s ease;
+        min-width: 0;
+    }
+
+    input[type="text"]:focus { border-color: var(--accent); }
+
+    select.cat-select {
+        padding: 0 10px;
+        border-radius: 8px;
+        border: 2px solid transparent;
+        background-color: var(--bg-input);
+        color: var(--text-main);
+        font-family: inherit;
+        font-size: 0.82rem;
+        outline: none;
+        max-width: 150px;
+    }
+
+    button.btn {
+        padding: 10px 16px;
+        border: none;
+        border-radius: 8px;
+        background-color: var(--accent);
+        color: #062033;
+        font-weight: 600;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+        white-space: nowrap;
+    }
+
+    button.btn:hover { background-color: var(--accent-hover); }
+    button.btn-danger { background-color: transparent; border: 1px solid var(--danger); color: var(--danger); }
+    button.btn-danger:hover { background-color: rgba(239, 68, 68, 0.1); }
+    button.btn-ghost { background-color: var(--bg-input); color: var(--text-main); }
+    button.btn-ghost:hover { background-color: var(--bg-input-hover); }
+    button.btn-ghost.active { background-color: var(--accent); color: #062033; }
+
+    .task-scroll {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        overflow-y: auto;
+        flex: 1;
+        padding-right: 5px;
+    }
+
+    .task-scroll::-webkit-scrollbar { width: 6px; }
+    .task-scroll::-webkit-scrollbar-track { background: var(--bg-card); }
+    .task-scroll::-webkit-scrollbar-thumb { background: var(--bg-input); border-radius: 10px; }
+
+    .cat-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        margin: 14px 0 8px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid var(--border-subtle);
+    }
+    .cat-header:first-child { margin-top: 0; }
+    .cat-header .cat-count { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; }
+
+    li.task-item {
+        display: flex;
+        align-items: flex-start;
+        padding: 11px 12px;
+        background-color: var(--bg-input);
+        margin-bottom: 7px;
+        border-radius: 8px;
+        border-left: 3px solid var(--cat-color, var(--accent));
+        transition: all 0.15s ease;
+    }
+
+    .task-content {
+        display: flex;
+        align-items: flex-start;
+        cursor: pointer;
+        flex: 1;
+        word-break: break-word;
+    }
+
+    .check-box {
+        width: 17px;
+        height: 17px;
+        border: 2px solid var(--accent);
+        border-radius: 4px;
+        margin-right: 11px;
+        margin-top: 2px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    li.completed .check-box { background-color: var(--accent); }
+    li.completed .check-box::after { content: '✓'; color: #062033; font-size: 11px; font-weight: bold; }
+    li.completed .task-text { text-decoration: line-through; color: var(--text-muted); }
+    .task-text { font-size: 0.87rem; line-height: 1.4; }
+
+    button.delete-btn {
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        cursor: pointer;
+        font-size: 1.1rem;
+        padding: 0 4px;
+        margin-left: 8px;
+        line-height: 1;
+    }
+    button.delete-btn:hover { color: var(--danger); }
+
+    .empty-hint {
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        text-align: center;
+        padding: 30px 10px;
+    }
+
+    /* Flow board */
+    .tools {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+    }
+
+    .flow-wrap {
+        flex: 1;
+        position: relative;
+        border: 2px dashed var(--border-subtle);
+        border-radius: 10px;
+        overflow: auto;
+        background-color: var(--canvas-bg);
+        background-image:
+            linear-gradient(rgba(148,163,184,0.06) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(148,163,184,0.06) 1px, transparent 1px);
+        background-size: 24px 24px;
+    }
+
+    .flow-canvas {
+        position: relative;
+        width: 1600px;
+        height: 1100px;
+        transform-origin: 0 0;
+    }
+
+    .zoom-controls {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        margin-left: auto;
+        background: var(--bg-input);
+        border-radius: 8px;
+        padding: 2px;
+    }
+    .zoom-controls button {
+        background: none;
+        border: none;
+        color: var(--text-main);
+        width: 26px;
+        height: 26px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.95rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .zoom-controls button:hover { background: var(--bg-input-hover); }
+    .zoom-label {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.72rem;
+        color: var(--text-muted);
+        min-width: 38px;
+        text-align: center;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .flow-svg {
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        pointer-events: none;
+    }
+    .flow-svg .arrow-hit { pointer-events: stroke; cursor: pointer; }
+    .flow-svg .arrow-del { pointer-events: all; cursor: pointer; }
+    .flow-svg .arrow-del-x { pointer-events: none; }
+
+    .flow-box {
+        position: absolute;
+        min-width: 130px;
+        max-width: 260px;
+        min-height: 64px;
+        background: var(--bg-input);
+        border: 2px solid var(--accent);
+        border-radius: 10px;
+        padding: 6px 8px 8px;
+        cursor: grab;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+        user-select: none;
+    }
+    .flow-box.dragging { cursor: grabbing; opacity: 0.9; box-shadow: 0 8px 22px rgba(0,0,0,0.5); }
+    .flow-box.connect-selected { outline: 2px solid #fbbf24; outline-offset: 2px; }
+    .flow-box.connect-mode { cursor: pointer; }
+
+    .box-toolbar {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 4px;
+        margin-bottom: 2px;
+        height: 16px;
+    }
+    input.box-color {
+        width: 16px; height: 16px;
+        border: none;
+        border-radius: 50%;
+        padding: 0;
+        background: none;
+        cursor: pointer;
+    }
+    button.box-delete {
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        font-size: 0.95rem;
+        cursor: pointer;
+        line-height: 1;
+        padding: 0 2px;
+    }
+    button.box-delete:hover { color: var(--danger); }
+
+    .box-text {
+        font-size: 0.82rem;
+        line-height: 1.35;
+        color: var(--text-main);
+        white-space: pre-wrap;
+        min-height: 20px;
+    }
+    textarea.box-edit {
+        width: 100%;
+        min-height: 40px;
+        background: var(--bg-main);
+        color: var(--text-main);
+        border: 1px solid var(--accent);
+        border-radius: 6px;
+        font-family: inherit;
+        font-size: 0.82rem;
+        padding: 4px 6px;
+        resize: none;
+    }
+
+    .flow-hint {
+        position: absolute;
+        top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        text-align: center;
+        pointer-events: none;
+        width: 240px;
+    }
+
+    .connect-banner {
+        font-size: 0.75rem;
+        color: #fbbf24;
+        font-family: 'JetBrains Mono', monospace;
+        display: none;
+    }
+    .connect-banner.show { display: block; }
+
+    /* Bulk Add modal */
+    .bulk-overlay {
+        display: none;
+        position: absolute;
+        inset: 0;
+        background: rgba(8, 13, 26, 0.72);
+        backdrop-filter: blur(2px);
+        z-index: 20;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+    .bulk-overlay.show { display: flex; }
+    .bulk-modal {
+        background: var(--bg-card);
+        border: 1px solid var(--border-subtle);
+        border-radius: 14px;
+        padding: 22px;
+        width: 100%;
+        max-width: 460px;
+        max-height: 90%;
+        overflow-y: auto;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    }
+    .bulk-modal h3 { margin: 0 0 4px; color: var(--accent); font-size: 1.05rem; }
+    .bulk-hint { color: var(--text-muted); font-size: 0.78rem; margin: 0 0 14px; line-height: 1.5; }
+    .bulk-modal textarea {
+        width: 100%;
+        min-height: 130px;
+        background: var(--bg-input);
+        color: var(--text-main);
+        border: 2px solid transparent;
+        border-radius: 8px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.82rem;
+        padding: 10px 12px;
+        resize: vertical;
+        outline: none;
+    }
+    .bulk-modal textarea:focus { border-color: var(--accent); }
+    .bulk-row { margin-top: 12px; }
+    .bulk-row label { display: block; font-size: 0.78rem; color: var(--text-muted); margin-bottom: 5px; }
+    .bulk-row input[type="text"] {
+        width: 100%; padding: 9px 12px; font-size: 0.85rem;
+        border: 2px solid transparent; border-radius: 8px;
+        background: var(--bg-input); color: var(--text-main); outline: none;
+    }
+    .bulk-row input[type="text"]:focus { border-color: var(--accent); }
+    .bulk-radios { display: flex; flex-direction: column; gap: 10px; }
+    .bulk-radios .bulk-label { font-size: 0.78rem; color: var(--text-muted); margin-right: 8px; }
+    .bulk-radios label {
+        display: inline-flex; align-items: center; gap: 5px;
+        font-size: 0.82rem; color: var(--text-main); margin-right: 14px; cursor: pointer;
+    }
+    .bulk-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+
+    .bulk-table-header {
+        display: grid;
+        grid-template-columns: 1fr 64px 26px;
+        gap: 8px;
+        font-size: 0.72rem;
+        color: var(--text-muted);
+        padding: 0 2px 6px;
+    }
+    .bulk-rows {
+        max-height: 260px;
+        overflow-y: auto;
+        padding-right: 4px;
+    }
+    .bulk-rows::-webkit-scrollbar { width: 6px; }
+    .bulk-rows::-webkit-scrollbar-thumb { background: var(--bg-input); border-radius: 10px; }
+    .bulk-row-item {
+        display: grid;
+        grid-template-columns: 1fr 64px 26px;
+        gap: 8px;
+        margin-bottom: 6px;
+        align-items: center;
+    }
+    .bulk-row-item input[type="text"] {
+        padding: 8px 10px;
+        font-size: 0.83rem;
+        border: 2px solid transparent;
+        border-radius: 7px;
+        background: var(--bg-input);
+        color: var(--text-main);
+        outline: none;
+        width: 100%;
+    }
+    .bulk-row-item input[type="text"]:focus,
+    .bulk-row-item input[type="number"]:focus { border-color: var(--accent); }
+    .bulk-row-item input[type="number"] {
+        padding: 8px 6px;
+        font-size: 0.83rem;
+        text-align: center;
+        border: 2px solid transparent;
+        border-radius: 7px;
+        background: var(--bg-input);
+        color: var(--text-main);
+        outline: none;
+        width: 100%;
+        -moz-appearance: textfield;
+    }
+    .bulk-row-item button.bulk-row-del {
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        cursor: pointer;
+        font-size: 1.05rem;
+        line-height: 1;
+        padding: 4px;
+    }
+    .bulk-row-item button.bulk-row-del:hover { color: var(--danger); }
+
+    @media (max-width: 900px) {
+        .workspace { grid-template-columns: 1fr !important; height: auto; }
+        .panel { height: 620px; }
+        .panel.collapsed { height: 48px; }
+        .collapsed-strip { flex-direction: row; }
+        .strip-label { writing-mode: horizontal-tb; }
+    }
+</style>
+</head>
+<body>
+
+<div class="workspace" id="workspace">
+    <!-- Panel Checklist -->
+    <div class="panel" id="panelChecklist">
+        <div class="panel-body">
+            <div class="panel-header">
+                <button class="minimize-btn" onclick="togglePanel('panelChecklist')" title="Minimize ke kiri">⟨</button>
+                <div>
+                    <h2>Pre-Flight: LifeAsia Dev</h2>
+                    <p class="subtitle">Bongkar logic sebelum nyentuh green screen.</p>
+                </div>
+                <div class="header-right">
+                    <button class="btn btn-danger" onclick="resetChecklist()" style="font-size: 0.75rem; padding: 6px 10px;">Reset Default</button>
+                    <span class="status-tag" id="taskStatus"></span>
+                </div>
+            </div>
+
+            <div class="progress-wrap">
+                <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+                <div class="progress-label" id="progressLabel">0/0 selesai</div>
+            </div>
+
+            <div class="input-group">
+                <input type="text" id="taskInput" placeholder="Tambah checklist baru..." onkeypress="handleKeyPress(event)">
+                <select class="cat-select" id="catSelect">
+                    <option value="analysis">📋 Analysis</option>
+                    <option value="design">🗺️ Design</option>
+                    <option value="development" selected>💻 Development</option>
+                    <option value="testing">🧪 Testing</option>
+                    <option value="deployment">🚀 Deployment</option>
+                </select>
+                <button class="btn" onclick="addTask()">Add</button>
+            </div>
+
+            <ul class="task-scroll" id="taskList"></ul>
+        </div>
+        <div class="collapsed-strip">
+            <button class="minimize-btn" onclick="togglePanel('panelChecklist')" title="Buka lagi">⟩</button>
+            <span class="strip-label">Pre-Flight: LifeAsia Dev</span>
+        </div>
+    </div>
+
+    <!-- Panel Flowchart -->
+    <div class="panel" id="panelFlow">
+        <div class="panel-body">
+            <div class="panel-header">
+                <div>
+                    <h2>Logic Board</h2>
+                    <p class="subtitle">Kotak = proses, panah = alur. Klik "Tambah Kotak", drag buat rapiin, sambung pakai mode Connect.</p>
+                </div>
+                <div class="header-right">
+                    <span class="status-tag" id="flowStatus"></span>
+                </div>
+                <button class="minimize-btn" onclick="togglePanel('panelFlow')" title="Minimize ke kanan">⟩</button>
+            </div>
+
+            <div class="tools">
+                <button class="btn" onclick="addBox()">+ Kotak</button>
+                <button class="btn btn-ghost" onclick="openBulkModal()">📦 Bulk Add</button>
+                <button class="btn btn-ghost" id="connectBtn" onclick="toggleConnectMode()">🔗 Connect Mode</button>
+                <button class="btn btn-danger" onclick="clearBoard()">🗑 Clear Board</button>
+                <span class="connect-banner" id="connectBanner">Mode Connect aktif: klik kotak asal, lalu klik kotak tujuan</span>
+                <div class="zoom-controls">
+                    <button onclick="zoomOut()" title="Zoom out">−</button>
+                    <span class="zoom-label" id="zoomLabel" onclick="zoomReset()" title="Klik buat reset ke 100%">100%</span>
+                    <button onclick="zoomIn()" title="Zoom in">+</button>
+                </div>
+            </div>
+
+            <div class="flow-wrap" id="flowWrap">
+                <div class="flow-canvas" id="flowCanvas">
+                    <svg class="flow-svg" id="flowSvg"></svg>
+                    <div id="boxLayer"></div>
+                    <div class="flow-hint" id="flowHint">Belum ada kotak. Klik "+ Kotak" atau "📦 Bulk Add" buat mulai gambar flow proses lo.</div>
+                </div>
+
+                <div class="bulk-overlay" id="bulkOverlay">
+                    <div class="bulk-modal">
+                        <h3>Bulk Add Proses</h3>
+                        <p class="bulk-hint">Isi nama proses + level per baris. Level menentukan posisi: angka kecil = paling atas/kiri, angka besar = paling bawah/kanan. Baris dengan level sama otomatis sejajar. Bisa paste banyak baris sekaligus ke kolom nama.</p>
+
+                        <div class="bulk-table-header">
+                            <span>Nama Proses</span>
+                            <span>Level</span>
+                            <span></span>
+                        </div>
+                        <div class="bulk-rows" id="bulkRows"></div>
+                        <button class="btn btn-ghost" onclick="addBulkRow()" style="margin-top:8px; font-size:0.8rem;">+ Tambah Baris</button>
+
+                        <div class="bulk-row bulk-radios">
+                            <div>
+                                <span class="bulk-label">Auto-connect:</span>
+                                <label><input type="radio" name="bulkConnect" value="sequence" checked> Sequence (rantai 1→2→3)</label>
+                                <label><input type="radio" name="bulkConnect" value="level"> Per Level (paralel/fan)</label>
+                            </div>
+                            <div>
+                                <span class="bulk-label">Arah:</span>
+                                <label><input type="radio" name="bulkDir" value="vertical" checked> Vertikal ↓ (tangga ke bawah)</label>
+                                <label><input type="radio" name="bulkDir" value="horizontal"> Horizontal → (kesamping)</label>
+                            </div>
+                        </div>
+                        <div class="bulk-actions">
+                            <button class="btn btn-ghost" onclick="closeBulkModal()">Batal</button>
+                            <button class="btn" onclick="generateBulk()">Generate</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="collapsed-strip">
+            <button class="minimize-btn" onclick="togglePanel('panelFlow')" title="Buka lagi">⟨</button>
+            <span class="strip-label">Logic Board</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    /* ============================================================
+       CHECKLIST
+       ============================================================ */
+    const CATEGORIES = [
+        { key: 'analysis',   label: '📋 Analysis & Requirement',      color: '#38bdf8' },
+        { key: 'design',     label: '🗺️ Design & Impact Analysis',    color: '#a78bfa' },
+        { key: 'development',label: '💻 Development',                 color: '#34d399' },
+        { key: 'testing',    label: '🧪 Testing & QA',                 color: '#fbbf24' },
+        { key: 'deployment', label: '🚀 Deployment & Migration',       color: '#fb7185' }
+    ];
+
+    const defaultLifeAsiaTasks = [
+        // Analysis & Requirement
+        { id: 1,  cat: 'analysis',   text: 'Cek Requirement (BRD/FSD) — pahami business rule asuransi (premi, klaim, komisi) sebelum koding', completed: false },
+        { id: 2,  cat: 'analysis',   text: 'Impact Analysis — cari program pemanggil/dipanggil pakai FNDSTRPDM atau cross-reference tool', completed: false },
+        { id: 3,  cat: 'analysis',   text: 'Identifikasi File Terdampak — list PF/LF yang bakal ke-update (policy master, premium, dll)', completed: false },
+        { id: 4,  cat: 'analysis',   text: 'Cek Existing Logic — baca source lama, pahami flow sebelum ubah, jangan asal tambah IF', completed: false },
+        { id: 5,  cat: 'analysis',   text: 'Konfirmasi ke User/BA kalau ada requirement ambigu, jangan asumsi sendiri', completed: false },
+        // Design
+        { id: 6,  cat: 'design',     text: 'Cek Struktur File — DSPFFD untuk PF/LF, atau buka copybook yang relevan', completed: false },
+        { id: 7,  cat: 'design',     text: 'Mapping Variabel & Field — gambar flow data/relasi tabel di Logic Board 👉', completed: false },
+        { id: 8,  cat: 'design',     text: 'Cek Redefines/Occurs — pastikan field yang di-redefine gak kepake beda maksud', completed: false },
+        { id: 9,  cat: 'design',     text: 'Cek Job Dependency — program ini jalan batch/online? Ada JOBQ/JOBSCDE terkait?', completed: false },
+        { id: 10, cat: 'design',     text: 'Review Naming Convention — samain standar penamaan program/variable existing', completed: false },
+        // Development
+        { id: 11, cat: 'development',text: 'Backup Source — copy member asli ke library personal/temp sebelum dioprek', completed: false },
+        { id: 12, cat: 'development',text: 'Siapkan Data Test — cari polis/data dummy di DEV/UAT pakai DFU atau SQL', completed: false },
+        { id: 13, cat: 'development',text: 'Cek Rounding Rule — pastikan kalkulasi desimal/bunga sesuai standar, hindari selisih cent', completed: false },
+        { id: 14, cat: 'development',text: 'Compile & Cek Spool — CRTCBLMOD/CRTBNDCBL, pastikan bersih tanpa severity error', completed: false },
+        { id: 15, cat: 'development',text: 'Cek Level Check — pastikan field level PF/LF gak berubah tanpa recompile relasi', completed: false },
+        { id: 16, cat: 'development',text: 'Code Review — minta review ke senior sebelum lanjut ke testing', completed: false },
+        // Testing
+        { id: 17, cat: 'testing',    text: 'Unit Test — jalankan program isolated pakai data test, cek output manual', completed: false },
+        { id: 18, cat: 'testing',    text: 'Test Edge Case — polis lapse, reinstate, cancel, nilai nol/negatif', completed: false },
+        { id: 19, cat: 'testing',    text: 'Regression Test — pastikan program lain yang manggil masih jalan normal', completed: false },
+        { id: 20, cat: 'testing',    text: 'Cek Joblog/Spool — review buat runtime error atau warning tersembunyi', completed: false },
+        { id: 21, cat: 'testing',    text: 'UAT Sign-off — dapetin approval user/BA sebelum lanjut ke production', completed: false },
+        // Deployment
+        { id: 22, cat: 'deployment', text: 'Siapkan Migration List — daftar object yang mau dipindah (PGM, PF, LF, DTAARA, dll)', completed: false },
+        { id: 23, cat: 'deployment', text: 'Cek Library Target — pastikan environment (UAT/PROD) library-nya benar', completed: false },
+        { id: 24, cat: 'deployment', text: 'Jadwalkan Downtime kalau ada perubahan struktur file, koordinasi dulu', completed: false },
+        { id: 25, cat: 'deployment', text: 'Rollback Plan — siapin source/version lama buat rollback kalau ada masalah', completed: false },
+        { id: 26, cat: 'deployment', text: 'Monitoring Pasca-Deploy — pantau job pertama setelah rilis, cek hasil transaksi', completed: false }
+    ];
+
+    let tasks = [];
+
+    function catMeta(key) { return CATEGORIES.find(c => c.key === key) || CATEGORIES[2]; }
+
+    function setStatus(el, text) {
+        const node = document.getElementById(el);
+        node.textContent = text;
+        if (text) setTimeout(() => { if (node.textContent === text) node.textContent = ''; }, 1800);
+    }
+
+    async function loadTasks() {
+        try {
+            const res = await window.storage.get('checklist-tasks', false);
+            tasks = res && res.value ? JSON.parse(res.value) : defaultLifeAsiaTasks.slice();
+        } catch (e) {
+            tasks = defaultLifeAsiaTasks.slice();
+        }
+        renderTasks();
+    }
+
+    async function saveTasks() {
+        setStatus('taskStatus', 'Menyimpan...');
+        try {
+            await window.storage.set('checklist-tasks', JSON.stringify(tasks), false);
+            setStatus('taskStatus', 'Tersimpan ✓');
+        } catch (e) {
+            setStatus('taskStatus', 'Gagal menyimpan');
+        }
+    }
+
+    function handleKeyPress(event) { if (event.key === 'Enter') addTask(); }
+
+    function addTask() {
+        const input = document.getElementById('taskInput');
+        const text = input.value.trim();
+        if (!text) return;
+        const cat = document.getElementById('catSelect').value;
+        tasks.push({ id: Date.now(), cat, text, completed: false });
+        renderTasks();
+        saveTasks();
+        input.value = '';
+        input.focus();
+    }
+
+    function toggleTask(id) {
+        const t = tasks.find(t => t.id === id);
+        if (t) { t.completed = !t.completed; renderTasks(); saveTasks(); }
+    }
+
+    function deleteTask(id) {
+        tasks = tasks.filter(t => t.id !== id);
+        renderTasks();
+        saveTasks();
+    }
+
+    function resetChecklist() {
+        if (confirm('Balikin checklist ke default bawaan LifeAsia?')) {
+            tasks = defaultLifeAsiaTasks.map(t => ({ ...t }));
+            renderTasks();
+            saveTasks();
+        }
+    }
+
+    function escapeHtml(s) {
+        return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function renderTasks() {
+        const listEl = document.getElementById('taskList');
+        listEl.innerHTML = '';
+
+        if (tasks.length === 0) {
+            listEl.innerHTML = '<div class="empty-hint">Belum ada checklist. Tambah baru atau klik Reset Default.</div>';
+        } else {
+            CATEGORIES.forEach(cat => {
+                const items = tasks.filter(t => t.cat === cat.key);
+                if (items.length === 0) return;
+                const done = items.filter(t => t.completed).length;
+                const header = document.createElement('div');
+                header.className = 'cat-header';
+                header.innerHTML = `<span>${cat.label}</span><span class="cat-count">${done}/${items.length}</span>`;
+                listEl.appendChild(header);
+
+                items.forEach(task => {
+                    const li = document.createElement('li');
+                    li.className = 'task-item' + (task.completed ? ' completed' : '');
+                    li.style.setProperty('--cat-color', cat.color);
+                    li.innerHTML = `
+                        <div class="task-content" onclick="toggleTask(${task.id})">
+                            <div class="check-box"></div>
+                            <span class="task-text">${escapeHtml(task.text)}</span>
+                        </div>
+                        <button class="delete-btn" onclick="deleteTask(${task.id})">×</button>
+                    `;
+                    listEl.appendChild(li);
+                });
+            });
+        }
+
+        const total = tasks.length;
+        const doneAll = tasks.filter(t => t.completed).length;
+        const pct = total ? Math.round((doneAll / total) * 100) : 0;
+        document.getElementById('progressFill').style.width = pct + '%';
+        document.getElementById('progressLabel').textContent = `${doneAll}/${total} selesai (${pct}%)`;
+    }
+
+    /* ============================================================
+       PANEL COLLAPSE / MINIMIZE
+       ============================================================ */
+    function togglePanel(id) {
+        document.getElementById(id).classList.toggle('collapsed');
+        updateGrid();
+    }
+
+    function updateGrid() {
+        const leftCollapsed = document.getElementById('panelChecklist').classList.contains('collapsed');
+        const rightCollapsed = document.getElementById('panelFlow').classList.contains('collapsed');
+        document.getElementById('workspace').style.gridTemplateColumns =
+            (leftCollapsed ? '58px' : '1fr') + ' ' + (rightCollapsed ? '58px' : '1.1fr');
+    }
+
+    /* ============================================================
+       LOGIC BOARD (flowchart: boxes + arrows)
+       ============================================================ */
+    let zoomLevel = 1;
+    const ZOOM_MIN = 0.4, ZOOM_MAX = 2, ZOOM_STEP = 0.1;
+
+    function applyZoom() {
+        document.getElementById('flowCanvas').style.transform = `scale(${zoomLevel})`;
+        document.getElementById('zoomLabel').textContent = Math.round(zoomLevel * 100) + '%';
+    }
+    function zoomIn() { zoomLevel = Math.min(ZOOM_MAX, +(zoomLevel + ZOOM_STEP).toFixed(2)); applyZoom(); renderArrows(); }
+    function zoomOut() { zoomLevel = Math.max(ZOOM_MIN, +(zoomLevel - ZOOM_STEP).toFixed(2)); applyZoom(); renderArrows(); }
+    function zoomReset() { zoomLevel = 1; applyZoom(); renderArrows(); }
+
+    let flowData = { boxes: [], arrows: [] };
+    let connectMode = false;
+    let connectFromId = null;
+    let selectedArrowId = null;
+    let dragState = null; // { id, offsetX, offsetY }
+
+    const BOX_COLORS = ['#38bdf8', '#a78bfa', '#34d399', '#fbbf24', '#fb7185', '#f472b6'];
+
+    function uid(prefix) { return prefix + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+    async function loadFlow() {
+        try {
+            const res = await window.storage.get('flowboard-data', false);
+            flowData = res && res.value ? JSON.parse(res.value) : starterFlow();
+        } catch (e) {
+            flowData = starterFlow();
+        }
+        updateCanvasSize();
+        renderBoxes();
+        renderArrows();
+    }
+
+    function starterFlow() {
+        const b1 = { id: uid('b'), x: 60, y: 60, w: 150, h: 64, text: 'Mulai', color: BOX_COLORS[0] };
+        const b2 = { id: uid('b'), x: 300, y: 60, w: 170, h: 64, text: 'Proses / Hitung Premi', color: BOX_COLORS[2] };
+        const b3 = { id: uid('b'), x: 570, y: 60, w: 150, h: 64, text: 'Selesai', color: BOX_COLORS[4] };
+        return {
+            boxes: [b1, b2, b3],
+            arrows: [{ id: uid('a'), from: b1.id, to: b2.id }, { id: uid('a'), from: b2.id, to: b3.id }]
+        };
+    }
+
+    async function saveFlow() {
+        setStatus('flowStatus', 'Menyimpan...');
+        try {
+            await window.storage.set('flowboard-data', JSON.stringify(flowData), false);
+            setStatus('flowStatus', 'Tersimpan ✓');
+        } catch (e) {
+            setStatus('flowStatus', 'Gagal menyimpan');
+        }
+    }
+
+    function addBox() {
+        const idx = flowData.boxes.length;
+        const box = {
+            id: uid('b'),
+            x: 60 + (idx % 5) * 40,
+            y: 60 + Math.floor(idx / 5) * 40 + (idx % 3) * 30,
+            w: 160, h: 64,
+            text: 'Proses baru',
+            color: BOX_COLORS[idx % BOX_COLORS.length]
+        };
+        flowData.boxes.push(box);
+        updateCanvasSize();
+        renderBoxes();
+        renderArrows();
+        saveFlow();
+    }
+
+    /* ---------- Bulk Add ---------- */
+    let bulkRows = [];
+
+    function openBulkModal() {
+        if (bulkRows.length === 0) {
+            bulkRows = [{ name: '', level: 1 }, { name: '', level: 1 }, { name: '', level: 1 }];
+        }
+        renderBulkRows();
+        document.getElementById('bulkOverlay').classList.add('show');
+        setTimeout(() => {
+            const first = document.querySelector('.bulk-row-item input[type="text"]');
+            if (first) first.focus();
+        }, 30);
+    }
+    function closeBulkModal() {
+        document.getElementById('bulkOverlay').classList.remove('show');
+    }
+
+    function addBulkRow(focus = true) {
+        const lastLevel = bulkRows.length ? bulkRows[bulkRows.length - 1].level : 1;
+        bulkRows.push({ name: '', level: lastLevel });
+        renderBulkRows();
+        if (focus) {
+            const inputs = document.querySelectorAll('.bulk-row-item input[type="text"]');
+            const last = inputs[inputs.length - 1];
+            if (last) last.focus();
+        }
+    }
+
+    function deleteBulkRow(idx) {
+        bulkRows.splice(idx, 1);
+        if (bulkRows.length === 0) bulkRows.push({ name: '', level: 1 });
+        renderBulkRows();
+    }
+
+    function renderBulkRows() {
+        const wrap = document.getElementById('bulkRows');
+        wrap.innerHTML = bulkRows.map((row, i) => `
+            <div class="bulk-row-item">
+                <input type="text" data-idx="${i}" data-field="name" placeholder="Nama proses ke-${i + 1}..." value="${escapeHtml(row.name)}">
+                <input type="number" data-idx="${i}" data-field="level" min="1" value="${row.level}">
+                <button class="bulk-row-del" data-idx="${i}" title="Hapus baris">×</button>
+            </div>
+        `).join('');
+
+        wrap.querySelectorAll('input[data-field="name"]').forEach(inp => {
+            inp.addEventListener('input', () => { bulkRows[+inp.dataset.idx].name = inp.value; });
+            inp.addEventListener('keydown', e => {
+                if (e.key === 'Enter') { e.preventDefault(); addBulkRow(); }
+            });
+            inp.addEventListener('paste', e => {
+                const text = (e.clipboardData || window.clipboardData).getData('text');
+                if (!text.includes('\n')) return; // let normal single-line paste happen
+                e.preventDefault();
+                const lines = text.split('\n').map(s => s.trim()).filter(Boolean);
+                if (lines.length === 0) return;
+                const idx = +inp.dataset.idx;
+                bulkRows[idx].name = lines[0];
+                const level = bulkRows[idx].level;
+                const rest = lines.slice(1).map(name => ({ name, level }));
+                bulkRows.splice(idx + 1, 0, ...rest);
+                renderBulkRows();
+            });
+        });
+        wrap.querySelectorAll('input[data-field="level"]').forEach(inp => {
+            inp.addEventListener('input', () => {
+                const v = parseInt(inp.value, 10);
+                bulkRows[+inp.dataset.idx].level = isNaN(v) || v < 1 ? 1 : v;
+            });
+        });
+        wrap.querySelectorAll('.bulk-row-del').forEach(btn => {
+            btn.addEventListener('click', () => deleteBulkRow(+btn.dataset.idx));
+        });
+    }
+
+    function getCanvasBounds() {
+        if (!flowData.boxes.length) return { maxX: 0, maxY: 0 };
+        let maxX = 0, maxY = 0;
+        flowData.boxes.forEach(b => { maxX = Math.max(maxX, b.x + b.w); maxY = Math.max(maxY, b.y + b.h); });
+        return { maxX, maxY };
+    }
+
+    function updateCanvasSize() {
+        const canvas = document.getElementById('flowCanvas');
+        let maxX = 1600, maxY = 1100;
+        flowData.boxes.forEach(b => { maxX = Math.max(maxX, b.x + b.w + 120); maxY = Math.max(maxY, b.y + b.h + 120); });
+        canvas.style.width = maxX + 'px';
+        canvas.style.height = maxY + 'px';
+    }
+
+    function generateBulk() {
+        const entries = bulkRows.filter(r => r.name.trim());
+        if (entries.length === 0) { alert('Isi minimal 1 nama proses dulu.'); return; }
+        const names = entries.map(r => r.name.trim());
+        const levels = entries.map(r => r.level);
+
+        const connectMode = document.querySelector('input[name="bulkConnect"]:checked').value; // sequence | level
+        const direction = document.querySelector('input[name="bulkDir"]:checked').value;        // vertical | horizontal
+
+        // group by level value, ascending (1 = paling atas / paling kiri)
+        const levelGroups = {};
+        names.forEach((name, i) => {
+            const lv = levels[i];
+            if (!levelGroups[lv]) levelGroups[lv] = [];
+            levelGroups[lv].push({ name, origIndex: i });
+        });
+        const sortedKeys = Object.keys(levelGroups).map(Number).sort((a, b) => a - b);
+
+        const boxW = 170, boxH = 64;
+        const itemGap = 200, levelGap = direction === 'vertical' ? 130 : 260;
+        const bounds = getCanvasBounds();
+        const baseY = direction === 'vertical' ? (bounds.maxY ? bounds.maxY + 70 : 60) : 60;
+        const baseX = direction === 'horizontal' ? (bounds.maxX ? bounds.maxX + 70 : 60) : 60;
+        const CENTER_X = 700, CENTER_Y = 500;
+
+        const boxesByOrigIndex = [];
+        sortedKeys.forEach((lv, rowIdx) => {
+            const group = levelGroups[lv];
+            const count = group.length;
+            group.forEach((item, colIdx) => {
+                let x, y;
+                if (direction === 'vertical') {
+                    const rowWidth = (count - 1) * itemGap;
+                    x = CENTER_X + colIdx * itemGap - rowWidth / 2;
+                    y = baseY + rowIdx * levelGap;
+                } else {
+                    const colHeight = (count - 1) * itemGap;
+                    x = baseX + rowIdx * levelGap;
+                    y = CENTER_Y + colIdx * itemGap - colHeight / 2;
+                }
+                x = Math.max(20, Math.round(x));
+                y = Math.max(20, Math.round(y));
+                const color = BOX_COLORS[rowIdx % BOX_COLORS.length];
+                const box = { id: uid('b'), x, y, w: boxW, h: boxH, text: item.name, color };
+                flowData.boxes.push(box);
+                boxesByOrigIndex[item.origIndex] = box;
+            });
+        });
+
+        if (connectMode === 'sequence') {
+            for (let i = 0; i < boxesByOrigIndex.length - 1; i++) {
+                flowData.arrows.push({ id: uid('a'), from: boxesByOrigIndex[i].id, to: boxesByOrigIndex[i + 1].id });
+            }
+        } else {
+            for (let i = 0; i < sortedKeys.length - 1; i++) {
+                const fromGroup = levelGroups[sortedKeys[i]].map(it => boxesByOrigIndex[it.origIndex]);
+                const toGroup = levelGroups[sortedKeys[i + 1]].map(it => boxesByOrigIndex[it.origIndex]);
+                if (fromGroup.length === toGroup.length) {
+                    fromGroup.forEach((fb, idx) => flowData.arrows.push({ id: uid('a'), from: fb.id, to: toGroup[idx].id }));
+                } else if (fromGroup.length === 1) {
+                    toGroup.forEach(tb => flowData.arrows.push({ id: uid('a'), from: fromGroup[0].id, to: tb.id }));
+                } else if (toGroup.length === 1) {
+                    fromGroup.forEach(fb => flowData.arrows.push({ id: uid('a'), from: fb.id, to: toGroup[0].id }));
+                } else {
+                    fromGroup.forEach(fb => toGroup.forEach(tb => flowData.arrows.push({ id: uid('a'), from: fb.id, to: tb.id })));
+                }
+            }
+        }
+
+        closeBulkModal();
+        bulkRows = [];
+        updateCanvasSize();
+        renderBoxes();
+        renderArrows();
+        saveFlow();
+    }
+
+    function deleteBox(id) {
+        flowData.boxes = flowData.boxes.filter(b => b.id !== id);
+        flowData.arrows = flowData.arrows.filter(a => a.from !== id && a.to !== id);
+        if (connectFromId === id) connectFromId = null;
+        updateCanvasSize();
+        renderBoxes();
+        renderArrows();
+        saveFlow();
+    }
+
+    function toggleConnectMode() {
+        connectMode = !connectMode;
+        connectFromId = null;
+        document.getElementById('connectBtn').classList.toggle('active', connectMode);
+        document.getElementById('connectBanner').classList.toggle('show', connectMode);
+        renderBoxes();
+    }
+
+    function handleBoxClick(id) {
+        if (!connectMode) return;
+        if (connectFromId === null) {
+            connectFromId = id;
+            renderBoxes();
+        } else if (connectFromId === id) {
+            connectFromId = null;
+            renderBoxes();
+        } else {
+            const exists = flowData.arrows.some(a => a.from === connectFromId && a.to === id);
+            if (!exists) {
+                flowData.arrows.push({ id: uid('a'), from: connectFromId, to: id });
+                renderArrows();
+                saveFlow();
+            }
+            connectFromId = null;
+            renderBoxes();
+        }
+    }
+
+    function deleteArrow(id) {
+        flowData.arrows = flowData.arrows.filter(a => a.id !== id);
+        selectedArrowId = null;
+        renderArrows();
+        saveFlow();
+    }
+
+    function clearBoard() {
+        if (confirm('Hapus semua kotak dan panah di Logic Board?')) {
+            flowData = { boxes: [], arrows: [] };
+            connectFromId = null;
+            document.getElementById('flowCanvas').style.width = '1600px';
+            document.getElementById('flowCanvas').style.height = '1100px';
+            renderBoxes();
+            renderArrows();
+            saveFlow();
+        }
+    }
+
+    function editBoxText(id) {
+        if (connectMode) return;
+        const box = flowData.boxes.find(b => b.id === id);
+        if (!box) return;
+        const boxEl = document.getElementById(id);
+        const textEl = boxEl.querySelector('.box-text');
+        const ta = document.createElement('textarea');
+        ta.className = 'box-edit';
+        ta.value = box.text;
+        textEl.replaceWith(ta);
+        ta.focus();
+        ta.select();
+
+        const commit = () => {
+            box.text = ta.value.trim() || 'Proses';
+            renderBoxes();
+            renderArrows();
+            saveFlow();
+        };
+        ta.addEventListener('blur', commit);
+        ta.addEventListener('keydown', e => {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ta.blur(); }
+            if (e.key === 'Escape') { renderBoxes(); }
+        });
+    }
+
+    function renderBoxes() {
+        const layer = document.getElementById('boxLayer');
+        const hint = document.getElementById('flowHint');
+        hint.style.display = flowData.boxes.length === 0 ? 'block' : 'none';
+
+        layer.innerHTML = flowData.boxes.map(b => `
+            <div class="flow-box${connectMode ? ' connect-mode' : ''}${connectFromId === b.id ? ' connect-selected' : ''}"
+                 id="${b.id}" style="left:${b.x}px; top:${b.y}px; width:${b.w}px; min-height:${b.h}px; border-color:${b.color}">
+                <div class="box-toolbar">
+                    <input type="color" class="box-color" value="${b.color}" data-id="${b.id}" title="Warna kotak">
+                    <button class="box-delete" data-id="${b.id}" title="Hapus kotak">×</button>
+                </div>
+                <div class="box-text" data-id="${b.id}">${escapeHtml(b.text)}</div>
+            </div>
+        `).join('');
+
+        // attach events
+        layer.querySelectorAll('.flow-box').forEach(el => {
+            const id = el.id;
+            el.addEventListener('mousedown', e => {
+                if (e.target.closest('.box-color') || e.target.closest('.box-delete')) return;
+                if (connectMode) return;
+                startDragBox(id, e);
+            });
+            el.addEventListener('click', e => {
+                if (e.target.closest('.box-color') || e.target.closest('.box-delete')) return;
+                handleBoxClick(id);
+            });
+            el.addEventListener('dblclick', e => {
+                if (e.target.closest('.box-color') || e.target.closest('.box-delete')) return;
+                editBoxText(id);
+            });
+        });
+        layer.querySelectorAll('.box-delete').forEach(btn => {
+            btn.addEventListener('click', e => { e.stopPropagation(); deleteBox(btn.dataset.id); });
+        });
+        layer.querySelectorAll('.box-color').forEach(inp => {
+            inp.addEventListener('input', () => {
+                const box = flowData.boxes.find(b => b.id === inp.dataset.id);
+                if (box) { box.color = inp.value; document.getElementById(box.id).style.borderColor = inp.value; renderArrows(); }
+            });
+            inp.addEventListener('change', saveFlow);
+        });
+    }
+
+    function startDragBox(id, e) {
+        const box = flowData.boxes.find(b => b.id === id);
+        const canvasRect = document.getElementById('flowCanvas').getBoundingClientRect();
+        dragState = {
+            id,
+            offsetX: (e.clientX - canvasRect.left) / zoomLevel - box.x,
+            offsetY: (e.clientY - canvasRect.top) / zoomLevel - box.y
+        };
+        document.getElementById(id).classList.add('dragging');
+    }
+
+    document.addEventListener('mousemove', e => {
+        if (!dragState) return;
+        const box = flowData.boxes.find(b => b.id === dragState.id);
+        if (!box) return;
+        const canvas = document.getElementById('flowCanvas');
+        const canvasRect = canvas.getBoundingClientRect();
+        let nx = (e.clientX - canvasRect.left) / zoomLevel - dragState.offsetX;
+        let ny = (e.clientY - canvasRect.top) / zoomLevel - dragState.offsetY;
+        nx = Math.max(0, Math.min(nx, canvas.offsetWidth - box.w));
+        ny = Math.max(0, Math.min(ny, canvas.offsetHeight - box.h));
+        box.x = nx; box.y = ny;
+        const el = document.getElementById(box.id);
+        el.style.left = nx + 'px';
+        el.style.top = ny + 'px';
+        renderArrows();
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (dragState) {
+            const el = document.getElementById(dragState.id);
+            if (el) el.classList.remove('dragging');
+            dragState = null;
+            saveFlow();
+        }
+    });
+
+    function edgePoint(box, dx, dy) {
+        const cx = box.x + box.w / 2, cy = box.y + box.h / 2;
+        const hw = box.w / 2, hh = box.h / 2;
+        const scaleX = dx !== 0 ? hw / Math.abs(dx) : Infinity;
+        const scaleY = dy !== 0 ? hh / Math.abs(dy) : Infinity;
+        const scale = Math.min(scaleX, scaleY);
+        return { x: cx + dx * scale, y: cy + dy * scale };
+    }
+
+    function arrowGeometry(a, b) {
+        const cxA = a.x + a.w / 2, cyA = a.y + a.h / 2;
+        const cxB = b.x + b.w / 2, cyB = b.y + b.h / 2;
+        let dx = cxB - cxA, dy = cyB - cyA;
+        if (dx === 0 && dy === 0) dx = 1;
+        const start = edgePoint(a, dx, dy);
+        const end = edgePoint(b, -dx, -dy);
+        const angle = Math.atan2(end.y - start.y, end.x - start.x);
+        return { start, end, angle };
+    }
+
+    function arrowHeadPoints(end, angle, size = 9) {
+        const spread = 0.45;
+        const b1 = { x: end.x - size * Math.cos(angle - spread), y: end.y - size * Math.sin(angle - spread) };
+        const b2 = { x: end.x - size * Math.cos(angle + spread), y: end.y - size * Math.sin(angle + spread) };
+        return `${end.x},${end.y} ${b1.x},${b1.y} ${b2.x},${b2.y}`;
+    }
+
+    function renderArrows() {
+        const svg = document.getElementById('flowSvg');
+        const parts = [];
+        flowData.arrows.forEach(ar => {
+            const a = flowData.boxes.find(b => b.id === ar.from);
+            const b = flowData.boxes.find(b => b.id === ar.to);
+            if (!a || !b) return;
+            const { start, end, angle } = arrowGeometry(a, b);
+            const tri = arrowHeadPoints(end, angle);
+            const selected = ar.id === selectedArrowId;
+            const color = selected ? '#ef4444' : a.color;
+            const midX = (start.x + end.x) / 2, midY = (start.y + end.y) / 2;
+            parts.push(`
+                <g class="arrow-group" data-id="${ar.id}">
+                    <line x1="${start.x}" y1="${start.y}" x2="${end.x}" y2="${end.y}" stroke="${color}" stroke-width="${selected ? 3 : 2}" />
+                    <line class="arrow-hit" data-id="${ar.id}" x1="${start.x}" y1="${start.y}" x2="${end.x}" y2="${end.y}" stroke="transparent" stroke-width="14" />
+                    <polygon points="${tri}" fill="${color}" />
+                    ${selected ? `<circle class="arrow-del" data-id="${ar.id}" cx="${midX}" cy="${midY}" r="9" fill="#ef4444" />
+                                  <text class="arrow-del-x" x="${midX}" y="${midY + 3}" text-anchor="middle" font-size="11" fill="#fff">×</text>` : ''}
+                </g>
+            `);
+        });
+        svg.innerHTML = parts.join('');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const svg = document.getElementById('flowSvg');
+        svg.addEventListener('click', e => {
+            if (e.target.classList.contains('arrow-del')) {
+                deleteArrow(e.target.dataset.id);
+                return;
+            }
+            if (e.target.classList.contains('arrow-hit')) {
+                selectedArrowId = e.target.dataset.id;
+                renderArrows();
+            }
+        });
+        document.addEventListener('keydown', e => {
+            if ((e.key === 'Delete' || e.key === 'Backspace') && selectedArrowId && document.activeElement.tagName !== 'TEXTAREA' && document.activeElement.tagName !== 'INPUT') {
+                deleteArrow(selectedArrowId);
+            }
+        });
+
+        document.getElementById('bulkOverlay').addEventListener('click', e => {
+            if (e.target.id === 'bulkOverlay') closeBulkModal();
+        });
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') closeBulkModal();
+        });
+
+        document.getElementById('flowWrap').addEventListener('wheel', e => {
+            if (!e.ctrlKey && !e.metaKey) return;
+            e.preventDefault();
+            if (e.deltaY < 0) zoomIn(); else zoomOut();
+        }, { passive: false });
+
+        applyZoom();
+        loadTasks();
+        loadFlow();
+    });
+</script>
+</body>
+</html>

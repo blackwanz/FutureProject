@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Budget Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg-a: #0a0e2a;
+    --bg-b: #170c33;
+    --bg-c: #052b2b;
+    --glass-bg: rgba(255,255,255,0.06);
+    --glass-bg-strong: rgba(255,255,255,0.10);
+    --glass-border: rgba(255,255,255,0.16);
+    --glass-hi: rgba(255,255,255,0.35);
+    --text-primary: #f4f3fb;
+    --text-muted: #9ea2c9;
+    --accent-violet: #8b5cf6;
+    --accent-indigo: #6366f1;
+    --accent-amber: #fbbf24;
+    --accent-teal: #2dd4bf;
+    --danger: #fb7185;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    color:var(--text-primary);
+    background: radial-gradient(ellipse at 20% -10%, #1e1450 0%, transparent 55%),
+                radial-gradient(ellipse at 90% 10%, #093a3a 0%, transparent 50%),
+                linear-gradient(160deg, var(--bg-a), var(--bg-b) 55%, var(--bg-c));
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    padding: 2.5rem 1rem;
+    overflow-x:hidden;
+    position:relative;
+  }
+  .orb{
+    position:fixed; border-radius:50%; filter:blur(70px); opacity:0.35; pointer-events:none; z-index:0;
+    animation: float 16s ease-in-out infinite;
+  }
+  .orb1{ width:340px; height:340px; background:var(--accent-violet); top:-100px; left:-80px; }
+  .orb2{ width:280px; height:280px; background:var(--accent-teal); bottom:-60px; right:-60px; animation-delay:-6s; }
+  .orb3{ width:220px; height:220px; background:var(--accent-amber); top:40%; right:10%; opacity:0.18; animation-delay:-11s; }
+  @keyframes float{
+    0%,100%{ transform: translate(0,0); }
+    50%{ transform: translate(20px,-30px); }
+  }
+
+  .app{ width:100%; max-width:560px; position:relative; z-index:1; display:flex; flex-direction:column; gap:1.1rem; }
+
+  .app-header{ display:flex; align-items:center; justify-content:space-between; gap:1rem; padding: 0 0.25rem; }
+  .brand{ font-family:'Sora', sans-serif; font-weight:700; font-size:0.95rem; letter-spacing:0.02em; color:var(--text-muted); }
+  .header-actions{ display:flex; gap:0.5rem; flex-shrink:0; }
+
+  .btn-glass{
+    font-family:inherit; font-size:0.8rem; font-weight:600; color:var(--text-primary);
+    background:var(--glass-bg); border:1px solid var(--glass-border); border-radius:12px;
+    padding:0.55rem 0.9rem; cursor:pointer; backdrop-filter: blur(16px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25), inset 0 1px 0 var(--glass-hi);
+    transition: transform 0.15s ease, background 0.15s ease;
+  }
+  .btn-glass:hover{ background:var(--glass-bg-strong); transform: translateY(-1px); }
+  .btn-glass:active{ transform: translateY(0px) scale(0.97); }
+
+  .btn-icon{
+    width:38px; height:38px; border-radius:12px; border:1px solid var(--glass-border);
+    background:var(--glass-bg); color:var(--text-muted); cursor:pointer; font-size:0.95rem;
+    backdrop-filter: blur(16px); box-shadow: 0 4px 12px rgba(0,0,0,0.25), inset 0 1px 0 var(--glass-hi);
+    transition: all 0.15s ease;
+  }
+  .btn-icon:hover{ color:var(--danger); border-color: rgba(251,113,133,0.4); }
+
+  /* ---------- Period selector (big title + hover flyout) ---------- */
+  .period-selector{ position:relative; }
+  .period-trigger{
+    width:100%; display:flex; align-items:center; justify-content:space-between; gap:0.75rem;
+    background:var(--glass-bg); border:1px solid var(--glass-border); border-radius:20px;
+    padding:1.1rem 1.3rem; cursor:pointer; backdrop-filter:blur(20px);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.3), inset 0 1px 0 var(--glass-hi);
+    transition: border-color .2s ease, background .2s ease;
+    font-family:inherit; color:inherit;
+  }
+  .period-trigger:active{ background:var(--glass-bg-strong); }
+  .period-selector.open .period-trigger{ border-color: rgba(139,92,246,0.5); background:var(--glass-bg-strong); }
+  .period-text{ display:flex; flex-direction:column; align-items:flex-start; gap:0.2rem; text-align:left; }
+  .period-title{ font-family:'Sora',sans-serif; font-weight:800; font-size:1.6rem; letter-spacing:-0.02em; cursor:pointer; transition: color .15s ease; display:inline-block; }
+  .period-title:hover{ color: var(--accent-violet); }
+  .period-meta{ font-size:0.78rem; color:var(--text-muted); }
+  .period-chevron{ flex-shrink:0; color:var(--text-muted); transition: transform .25s ease; }
+  .period-selector.open .period-chevron{ transform: rotate(180deg); color:var(--accent-violet); }
+
+  .period-flyout{
+    position:absolute; top:calc(100% + 0.5rem); left:0; right:0; z-index:50;
+    background: rgba(20,16,45,0.88); border:1px solid var(--glass-border); border-radius:18px;
+    backdrop-filter: blur(24px); box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 1px 0 var(--glass-hi);
+    padding:0.5rem; max-height:280px; overflow-y:auto;
+    opacity:0; transform: translateY(-8px) scale(0.98); pointer-events:none;
+    transition: opacity .18s ease, transform .18s ease;
+  }
+  .period-selector.open .period-flyout{ opacity:1; transform:none; pointer-events:auto; }
+
+  .flyout-row{
+    display:flex; align-items:center; gap:0.6rem; width:100%; padding:0.65rem 0.8rem; border-radius:12px;
+    background:transparent; border:none; color:var(--text-primary); font-family:'Sora',sans-serif; font-size:0.86rem; font-weight:600;
+    cursor:pointer; text-align:left; transition: background .15s ease;
+  }
+  .flyout-row:hover{ background: rgba(255,255,255,0.08); }
+  .flyout-row.active{ background: linear-gradient(135deg, rgba(139,92,246,0.35), rgba(99,102,241,0.25)); }
+  .flyout-row .dot{ width:6px; height:6px; border-radius:50%; background:var(--accent-teal); flex-shrink:0; }
+  .flyout-row .now-tag{ margin-left:auto; font-size:0.65rem; font-weight:700; text-transform:uppercase; color:var(--accent-amber); opacity:0.9; }
+
+  .glass-panel{
+    background: var(--glass-bg); border:1px solid var(--glass-border); border-radius:24px;
+    backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.35), inset 0 1px 0 var(--glass-hi);
+    padding: 1.5rem; display:flex; flex-direction:column; gap:1.25rem;
+  }
+
+  .add-form{ display:flex; gap:0.5rem; }
+  .add-form input{
+    font-family:inherit; font-size:0.9rem; color:var(--text-primary);
+    background: rgba(0,0,0,0.18); border:1px solid var(--glass-border); border-radius:12px;
+    padding:0.75rem 0.9rem; outline:none;
+    box-shadow: inset 0 2px 6px rgba(0,0,0,0.3);
+    transition: border-color 0.2s ease;
+  }
+  .add-form input::placeholder{ color: rgba(158,162,201,0.7); }
+  .add-form input:focus{ border-color: var(--accent-violet); }
+  .add-form input#item-name{ flex:1.6; min-width:0; }
+  .add-form input#item-amount{ flex:1; min-width:0; }
+
+  .amount-hint{
+    font-size:0.74rem; color:var(--accent-teal); font-weight:600; min-height:1rem;
+    padding-left:0.2rem; margin-top:-0.7rem;
+  }
+  .btn-add-3d{
+    font-family:'Sora', sans-serif; font-weight:700; font-size:0.85rem; color:#0a0e2a;
+    background: linear-gradient(135deg, var(--accent-amber), #f59e0b);
+    border:none; border-radius:12px; padding:0 1.1rem; cursor:pointer; flex-shrink:0;
+    box-shadow: 0 6px 14px rgba(245,158,11,0.4), inset 0 1px 0 rgba(255,255,255,0.6);
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+  }
+  .btn-add-3d:hover{ transform: translateY(-1px); }
+  .btn-add-3d:active{ transform: translateY(1px); box-shadow: 0 2px 6px rgba(245,158,11,0.35), inset 0 1px 0 rgba(255,255,255,0.4); }
+
+  .item-list{ list-style:none; display:flex; flex-direction:column; gap:0.6rem; min-height:40px; }
+
+  .item-card{
+    position:relative; display:flex; align-items:center; gap:0.75rem;
+    background: rgba(255,255,255,0.05); border:1px solid var(--glass-border);
+    border-radius:16px; padding:0.7rem 0.8rem;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.15);
+    transition: box-shadow 0.15s ease, background 0.15s ease;
+    animation: cardIn 0.28s ease both;
+  }
+  @keyframes cardIn{ from{ opacity:0; transform: translateY(6px) scale(0.98);} to{ opacity:1; transform:none; } }
+  .item-card.dragging{
+    box-shadow: 0 22px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.3);
+    background: rgba(255,255,255,0.10);
+    z-index:1000; pointer-events:none;
+  }
+  .item-placeholder{
+    border-radius:16px; border:1.5px dashed var(--glass-border); background: rgba(255,255,255,0.02);
+  }
+
+  .rank-badge{
+    flex-shrink:0; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-family:'Sora', sans-serif; font-weight:700; font-size:0.8rem;
+    background: linear-gradient(135deg, rgba(255,255,255,0.3), rgba(255,255,255,0.08));
+    box-shadow: 0 3px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.5);
+    color: var(--text-primary);
+  }
+  .rank-badge.gold{ background: linear-gradient(135deg,#fef3c7,#f59e0b); color:#3a2405; }
+  .rank-badge.silver{ background: linear-gradient(135deg,#f1f5f9,#94a3b8); color:#1f2937; }
+  .rank-badge.bronze{ background: linear-gradient(135deg,#fbd8b4,#c2733a); color:#3a1f05; }
+
+  .drag-handle{
+    flex-shrink:0; width:22px; height:30px; display:flex; align-items:center; justify-content:center;
+    color: var(--text-muted); cursor:grab; touch-action:none; font-size:1rem; letter-spacing:2px;
+    border-radius:8px;
+  }
+  .drag-handle:active{ cursor:grabbing; }
+
+  .item-info{ flex:1; min-width:0; display:flex; flex-direction:column; gap:0.1rem; }
+  .item-name{ font-weight:600; font-size:0.92rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .item-amount{ font-size:0.8rem; color:var(--accent-amber); font-weight:600; }
+
+  /* actions: hidden until hover, always visible on touch devices */
+  .item-actions{ display:flex; align-items:center; gap:0.35rem; flex-shrink:0;
+    opacity:0; transform:translateX(6px); transition: opacity .15s ease, transform .15s ease; }
+  .item-card:hover .item-actions,
+  .item-card:focus-within .item-actions,
+  .item-card.actions-pinned .item-actions{ opacity:1; transform:none; }
+  @media (hover:none){ .item-actions{ opacity:1; transform:none; } }
+
+  .move-wrap{ position:relative; }
+  .btn-move{
+    width:28px; height:28px; border-radius:9px; border:1px solid var(--glass-border);
+    background:rgba(255,255,255,0.06); color:var(--text-muted); display:flex; align-items:center; justify-content:center;
+    cursor:pointer; transition: all .15s ease;
+  }
+  .btn-move:hover{ color:var(--accent-teal); border-color: rgba(45,212,191,0.4); }
+  .move-wrap.open .btn-move{ color:var(--accent-teal); border-color: rgba(45,212,191,0.5); background: rgba(45,212,191,0.1); }
+
+  .move-menu{
+    position:absolute; right:0; top:calc(100% + 0.4rem); min-width:160px; max-height:220px; overflow-y:auto; z-index:40;
+    background: rgba(20,16,45,0.92); border:1px solid var(--glass-border); border-radius:14px;
+    backdrop-filter: blur(20px); box-shadow: 0 16px 34px rgba(0,0,0,0.45), inset 0 1px 0 var(--glass-hi);
+    padding:0.4rem; opacity:0; transform: translateY(-6px) scale(0.96); pointer-events:none; transition: all .15s ease;
+  }
+  .move-wrap.open .move-menu{ opacity:1; transform:none; pointer-events:auto; }
+  .move-menu-label{ font-size:0.65rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted); padding:0.3rem 0.5rem; }
+  .move-menu-item{ display:block; width:100%; text-align:left; padding:0.5rem 0.6rem; border-radius:9px; background:transparent; border:none; color:var(--text-primary); font-size:0.78rem; font-family:inherit; cursor:pointer; transition: background .12s ease; }
+  .move-menu-item:hover{ background: rgba(255,255,255,0.08); }
+
+  .btn-delete{
+    background:transparent; border:none; color: rgba(251,113,133,0.75); cursor:pointer; font-size:1rem;
+    width:28px; height:28px; border-radius:9px; flex-shrink:0; transition: all 0.15s ease;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .btn-delete:hover{ color: var(--danger); background: rgba(251,113,133,0.12); }
+
+  .empty-state{ text-align:center; color:var(--text-muted); font-size:0.85rem; padding: 1.5rem 0; }
+
+  .total-section{
+    display:flex; justify-content:space-between; align-items:center;
+    padding-top:1.1rem; border-top: 1px dashed var(--glass-border);
+  }
+  .total-label{ font-family:'Sora', sans-serif; font-weight:600; font-size:0.95rem; color:var(--text-muted); }
+  .total-amount{
+    font-family:'Sora', sans-serif; font-weight:800; font-size:1.5rem;
+    background: linear-gradient(135deg, var(--accent-amber), var(--accent-teal));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+
+  .footnote{ text-align:center; color: var(--text-muted); font-size:0.72rem; opacity:0.7; padding-top:0.2rem; }
+
+  #loading-overlay{
+    position:fixed; inset:0; background: var(--bg-a); display:flex; align-items:center; justify-content:center;
+    color: var(--text-muted); font-family:'Sora',sans-serif; font-size:0.9rem; z-index:9999; transition: opacity 0.3s ease;
+  }
+
+  @media (max-width:420px){
+    .glass-panel{ padding:1.1rem; border-radius:20px; }
+    .period-title{ font-size:1.3rem; }
+  }
+</style>
+</head>
+<body>
+  <div id="loading-overlay">Memuat data…</div>
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+  <div class="orb orb3"></div>
+
+  <div class="app">
+    <header class="app-header">
+      <span class="brand">BUDGET PLANNER</span>
+      <div class="header-actions">
+        <button class="btn-glass" id="export-btn">⬇ Excel</button>
+        <button class="btn-icon" id="reset-btn" title="Hapus semua data">🗑</button>
+      </div>
+    </header>
+
+    <div class="period-selector" id="period-selector">
+      <button type="button" class="period-trigger" id="period-trigger">
+        <span class="period-text">
+          <span class="period-title" id="period-title">—</span>
+          <span class="period-meta" id="period-meta">—</span>
+        </span>
+        <svg class="period-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="period-flyout" id="period-flyout"></div>
+    </div>
+
+    <main class="glass-panel">
+      <form class="add-form" id="add-form">
+        <input type="text" id="item-name" placeholder="Misal: Groceries" required autocomplete="off">
+        <input type="text" inputmode="decimal" id="item-amount" placeholder="Jumlah" required autocomplete="off">
+        <button type="submit" class="btn-add-3d">+ Tambah</button>
+      </form>
+      <div class="amount-hint" id="amount-hint"></div>
+
+      <ul class="item-list" id="item-list"></ul>
+
+      <div class="total-section">
+        <div class="total-label">Total</div>
+        <div class="total-amount" id="total-amount">Rp 0</div>
+      </div>
+    </main>
+
+    <p class="footnote">Tahan ikon ⋮⋮ lalu geser buat urutin prioritas · Data tersimpan otomatis</p>
+  </div>
+
+<script>
+(function(){
+  const STORAGE_KEY = 'budget-months-v1';
+  const MONTHS_AHEAD = 11; // current + 11 more = 12 months of runway
+
+  const periodSelector = document.getElementById('period-selector');
+  const periodTrigger = document.getElementById('period-trigger');
+  const periodFlyout = document.getElementById('period-flyout');
+  const periodTitleEl = document.getElementById('period-title');
+  const periodMetaEl = document.getElementById('period-meta');
+  const listEl = document.getElementById('item-list');
+  const totalEl = document.getElementById('total-amount');
+  const form = document.getElementById('add-form');
+  const nameInput = document.getElementById('item-name');
+  const amountInput = document.getElementById('item-amount');
+  const loadingOverlay = document.getElementById('loading-overlay');
+  const exportBtn = document.getElementById('export-btn');
+  const resetBtn = document.getElementById('reset-btn');
+
+  const idFmt = new Intl.DateTimeFormat('id-ID', { month: 'short', year: 'numeric' });
+  const idFmtLong = new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' });
+
+  function monthKey(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'); }
+  function keyToDate(key){ const [y,m] = key.split('-').map(Number); return new Date(y, m-1, 1); }
+  function formatRupiah(n){ return 'Rp ' + Number(n||0).toLocaleString('id-ID', {maximumFractionDigits:2}); }
+
+  // Input is always kept in Indonesian masked form while typing: dots = thousands, comma = decimal.
+  function parseAmount(raw){
+    if (!raw) return NaN;
+    const cleaned = String(raw).trim().replace(/\./g, '').replace(',', '.');
+    if (cleaned === '') return NaN;
+    return parseFloat(cleaned);
+  }
+
+  function magnitudeLabel(n){
+    if (isNaN(n) || n === 0) return '';
+    const abs = Math.abs(n);
+    if (abs >= 1e12) return '≈ ' + (n/1e12).toLocaleString('id-ID',{maximumFractionDigits:2}) + ' triliun';
+    if (abs >= 1e9)  return '≈ ' + (n/1e9).toLocaleString('id-ID',{maximumFractionDigits:2}) + ' miliar';
+    if (abs >= 1e6)  return '≈ ' + (n/1e6).toLocaleString('id-ID',{maximumFractionDigits:2}) + ' juta';
+    if (abs >= 1e3)  return '≈ ' + (n/1e3).toLocaleString('id-ID',{maximumFractionDigits:2}) + ' ribu';
+    return '';
+  }
+
+  // Live-masks the amount input as the user types: digits get grouped with '.' every 3
+  // from the right, and a single ',' marks the decimal part. Keeps caret position stable.
+  function formatLiveAmount(input){
+    const cursorPos = input.selectionStart;
+    const before = input.value.slice(0, cursorPos);
+    const digitsBefore = (before.match(/\d/g) || []).length;
+
+    const raw = input.value;
+    const commaIdx = raw.indexOf(',');
+    let intPart, decPart = null;
+    if (commaIdx !== -1) {
+      intPart = raw.slice(0, commaIdx).replace(/\D/g, '');
+      decPart = raw.slice(commaIdx + 1).replace(/\D/g, '').slice(0, 2);
+    } else {
+      intPart = raw.replace(/\D/g, '');
+    }
+    intPart = intPart.replace(/^0+(?=\d)/, '');
+    const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    let formatted = formattedInt;
+    if (decPart !== null) formatted += ',' + decPart;
+
+    input.value = formatted;
+
+    let count = 0, pos = formatted.length;
+    if (digitsBefore === 0) {
+      pos = 0;
+    } else {
+      for (let i = 0; i < formatted.length; i++) {
+        if (/\d/.test(formatted[i])) count++;
+        if (count === digitsBefore) { pos = i + 1; break; }
+      }
+    }
+    input.setSelectionRange(pos, pos);
+  }
+
+  const today = new Date();
+  const monthList = [];
+  for (let i=0; i<=MONTHS_AHEAD; i++){
+    monthList.push(new Date(today.getFullYear(), today.getMonth()+i, 1));
+  }
+  const currentMonthKey = monthKey(today);
+
+  let months = {};        // { '2026-07': [ {id,name,amount}, ... ] }
+  let activeMonth = currentMonthKey;
+
+  function ensureMonths(){
+    monthList.forEach(d => {
+      const k = monthKey(d);
+      if (!Array.isArray(months[k])) months[k] = [];
+    });
+  }
+
+  const hasClaudeStorage = typeof window.storage !== 'undefined' && window.storage && typeof window.storage.get === 'function';
+
+  async function storageGet(key){
+    if (hasClaudeStorage) {
+      try {
+        const res = await window.storage.get(key, false);
+        return res ? res.value : null;
+      } catch (err) {
+        return null; // key not found or storage unavailable
+      }
+    }
+    try { return localStorage.getItem(key); } catch (err) { console.error('localStorage get gagal:', err); return null; }
+  }
+
+  async function storageSet(key, value){
+    if (hasClaudeStorage) {
+      try {
+        const res = await window.storage.set(key, value, false);
+        if (!res) console.error('Storage set returned null');
+      } catch (err) {
+        console.error('Gagal menyimpan (claude storage):', err);
+      }
+      return;
+    }
+    try { localStorage.setItem(key, value); } catch (err) { console.error('localStorage set gagal:', err); }
+  }
+
+  async function loadState(){
+    try {
+      const value = await storageGet(STORAGE_KEY);
+      if (value) months = JSON.parse(value);
+    } catch (err) {
+      console.error('Gagal load data, mulai dengan data kosong:', err);
+      months = {};
+    }
+    ensureMonths();
+  }
+
+  async function saveState(){
+    await storageSet(STORAGE_KEY, JSON.stringify(months));
+  }
+
+  // ---------- Period selector ----------
+  let periodOpen = false;
+  let closeTimer = null;
+  function setPeriodOpen(v){
+    periodOpen = v;
+    periodSelector.classList.toggle('open', v);
+  }
+  function openPeriod(){ clearTimeout(closeTimer); setPeriodOpen(true); }
+  function scheduleClosePeriod(){ clearTimeout(closeTimer); closeTimer = setTimeout(() => setPeriodOpen(false), 150); }
+
+  periodTrigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setPeriodOpen(!periodOpen);
+  });
+  if (window.matchMedia('(hover: hover)').matches){
+    // Hover area is intentionally scoped to just the month title text + the flyout itself,
+    // not the whole trigger box, so casually moving the mouse across the panel doesn't pop it open.
+    periodTitleEl.addEventListener('mouseenter', openPeriod);
+    periodTitleEl.addEventListener('mouseleave', scheduleClosePeriod);
+    periodFlyout.addEventListener('mouseenter', openPeriod);
+    periodFlyout.addEventListener('mouseleave', scheduleClosePeriod);
+  }
+  document.addEventListener('click', (e) => {
+    if (!periodSelector.contains(e.target)) setPeriodOpen(false);
+  });
+
+  function renderPeriodFlyout(){
+    periodFlyout.innerHTML = '';
+    monthList.forEach(d => {
+      const k = monthKey(d);
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'flyout-row' + (k === activeMonth ? ' active' : '');
+      const hasItems = (months[k] || []).length > 0;
+      row.innerHTML = `${hasItems ? '<span class="dot"></span>' : '<span style="width:6px"></span>'}<span>${idFmtLong.format(d)}</span>${k === currentMonthKey ? '<span class="now-tag">Sekarang</span>' : ''}`;
+      row.addEventListener('click', () => {
+        activeMonth = k;
+        setPeriodOpen(false);
+        renderAll();
+      });
+      periodFlyout.appendChild(row);
+    });
+  }
+
+  function renderPeriodTitle(){
+    const items = months[activeMonth] || [];
+    periodTitleEl.textContent = idFmtLong.format(keyToDate(activeMonth));
+    periodMetaEl.textContent = `${items.length} item${activeMonth === currentMonthKey ? ' · Bulan ini' : ''}`;
+  }
+
+  // ---------- Item list ----------
+  function closeAllMoveMenus(except){
+    document.querySelectorAll('.move-wrap.open').forEach(w => { if (w !== except) w.classList.remove('open'); });
+  }
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.move-wrap')) closeAllMoveMenus(null);
+  });
+
+  function renderItems(){
+    const items = months[activeMonth] || [];
+    listEl.innerHTML = '';
+
+    if (items.length === 0){
+      listEl.innerHTML = '<li class="empty-state">Belum ada item bulan ini. Tambahin lewat form di atas.</li>';
+    } else {
+      items.forEach((item, idx) => {
+        const li = document.createElement('li');
+        li.className = 'item-card';
+        li.dataset.id = item.id;
+
+        const rank = idx + 1;
+        const rankClass = rank === 1 ? 'gold' : rank === 2 ? 'silver' : rank === 3 ? 'bronze' : '';
+
+        const otherMonths = monthList.filter(d => monthKey(d) !== activeMonth);
+        const moveOptionsHtml = otherMonths.map(d => `<button type="button" class="move-menu-item" data-target="${monthKey(d)}">${idFmt.format(d)}</button>`).join('');
+
+        li.innerHTML = `
+          <span class="drag-handle" title="Geser buat urutin">⠿</span>
+          <span class="rank-badge ${rankClass}">${rank}</span>
+          <div class="item-info">
+            <span class="item-name">${escapeHtml(item.name)}</span>
+            <span class="item-amount">${formatRupiah(item.amount)}</span>
+          </div>
+          <div class="item-actions">
+            <div class="move-wrap">
+              <button type="button" class="btn-move" title="Pindah ke bulan lain">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+              </button>
+              <div class="move-menu">
+                <div class="move-menu-label">Pindah ke</div>
+                ${moveOptionsHtml}
+              </div>
+            </div>
+            <button type="button" class="btn-delete" title="Hapus">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>
+            </button>
+          </div>
+        `;
+
+        const moveWrap = li.querySelector('.move-wrap');
+        li.querySelector('.btn-move').addEventListener('click', (e) => {
+          e.stopPropagation();
+          const willOpen = !moveWrap.classList.contains('open');
+          closeAllMoveMenus(moveWrap);
+          moveWrap.classList.toggle('open', willOpen);
+        });
+        li.querySelectorAll('.move-menu-item').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            moveItem(item.id, btn.dataset.target);
+          });
+        });
+        li.querySelector('.btn-delete').addEventListener('click', () => deleteItem(item.id));
+        li.querySelector('.drag-handle').addEventListener('pointerdown', (e) => startDrag(e, li));
+
+        listEl.appendChild(li);
+      });
+    }
+
+    const total = items.reduce((sum, it) => sum + Number(it.amount || 0), 0);
+    totalEl.textContent = formatRupiah(total);
+  }
+
+  function escapeHtml(str){
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function renderAll(){
+    renderPeriodTitle();
+    renderPeriodFlyout();
+    renderItems();
+  }
+
+  // ---------- Mutations ----------
+  const amountHint = document.getElementById('amount-hint');
+  amountInput.addEventListener('input', () => {
+    formatLiveAmount(amountInput);
+    const val = parseAmount(amountInput.value);
+    amountHint.textContent = magnitudeLabel(val);
+  });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = nameInput.value.trim();
+    const amount = parseAmount(amountInput.value);
+    if (!name || isNaN(amount) || amount < 0) return;
+
+    months[activeMonth] = months[activeMonth] || [];
+    months[activeMonth].push({ id: Date.now() + Math.random().toString(16).slice(2), name, amount });
+
+    nameInput.value = '';
+    amountInput.value = '';
+    amountHint.textContent = '';
+    nameInput.focus();
+
+    renderAll();
+    await saveState();
+  });
+
+  async function deleteItem(id){
+    months[activeMonth] = (months[activeMonth] || []).filter(it => it.id !== id);
+    renderAll();
+    await saveState();
+  }
+
+  async function moveItem(id, targetKey){
+    const arr = months[activeMonth] || [];
+    const idx = arr.findIndex(it => it.id === id);
+    if (idx === -1) return;
+    const [item] = arr.splice(idx, 1);
+    months[targetKey] = months[targetKey] || [];
+    months[targetKey].push(item);
+    closeAllMoveMenus(null);
+    renderAll();
+    await saveState();
+  }
+
+  resetBtn.addEventListener('click', async () => {
+    const ok = confirm('Hapus semua data budget di semua bulan? Ini tidak bisa dibatalkan.');
+    if (!ok) return;
+    months = {};
+    ensureMonths();
+    renderAll();
+    await saveState();
+  });
+
+  exportBtn.addEventListener('click', () => {
+    try {
+      const wb = XLSX.utils.book_new();
+      let any = false;
+      monthList.forEach(d => {
+        const k = monthKey(d);
+        const items = months[k] || [];
+        if (items.length === 0) return;
+        any = true;
+        const rows = [['Prioritas', 'Item', 'Jumlah']];
+        items.forEach((it, i) => rows.push([i+1, it.name, Number(it.amount||0)]));
+        rows.push(['', 'Total', items.reduce((s,it)=>s+Number(it.amount||0),0)]);
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+        ws['!cols'] = [{wch:10},{wch:28},{wch:14}];
+        const sheetName = idFmt.format(d).replace('.', '').slice(0,31);
+        XLSX.utils.book_append_sheet(wb, ws, sheetName);
+      });
+      if (!any){
+        alert('Belum ada data buat di-export.');
+        return;
+      }
+      XLSX.writeFile(wb, 'budget-planner.xlsx');
+    } catch (err) {
+      console.error('Export gagal:', err);
+      alert('Export gagal, coba lagi.');
+    }
+  });
+
+  // ---------- Drag to reorder ----------
+  let dragState = null;
+
+  function startDrag(e, li){
+    e.preventDefault();
+    const rect = li.getBoundingClientRect();
+    const placeholder = document.createElement('li');
+    placeholder.className = 'item-placeholder';
+    placeholder.style.height = rect.height + 'px';
+    li.parentNode.insertBefore(placeholder, li);
+
+    li.style.position = 'fixed';
+    li.style.left = rect.left + 'px';
+    li.style.top = rect.top + 'px';
+    li.style.width = rect.width + 'px';
+    li.classList.add('dragging');
+    listEl.appendChild(li);
+
+    dragState = { li, placeholder, offsetY: e.clientY - rect.top, pointerId: e.pointerId };
+    li.setPointerCapture(e.pointerId);
+
+    li.addEventListener('pointermove', onDragMove);
+    li.addEventListener('pointerup', onDragEnd);
+    li.addEventListener('pointercancel', onDragEnd);
+  }
+
+  function getDragAfterElement(y){
+    const els = [...listEl.querySelectorAll('.item-card:not(.dragging)')];
+    return els.reduce((closest, child) => {
+      const box = child.getBoundingClientRect();
+      const offset = y - box.top - box.height / 2;
+      if (offset < 0 && offset > closest.offset) return { offset, element: child };
+      return closest;
+    }, { offset: -Infinity, element: null }).element;
+  }
+
+  function onDragMove(e){
+    if (!dragState) return;
+    const y = e.clientY - dragState.offsetY;
+    dragState.li.style.top = y + 'px';
+    const dy = e.clientY - (dragState.placeholder.getBoundingClientRect().top + dragState.placeholder.offsetHeight/2);
+    const tilt = Math.max(-6, Math.min(6, dy / 25));
+    dragState.li.style.transform = `rotate(${tilt}deg)`;
+
+    const after = getDragAfterElement(e.clientY);
+    if (after == null) listEl.appendChild(dragState.placeholder);
+    else listEl.insertBefore(dragState.placeholder, after);
+  }
+
+  async function onDragEnd(e){
+    if (!dragState) return;
+    const { li, placeholder, pointerId } = dragState;
+    li.releasePointerCapture(pointerId);
+    li.removeEventListener('pointermove', onDragMove);
+    li.removeEventListener('pointerup', onDragEnd);
+    li.removeEventListener('pointercancel', onDragEnd);
+
+    li.style.position = '';
+    li.style.left = '';
+    li.style.top = '';
+    li.style.width = '';
+    li.style.transform = '';
+    li.classList.remove('dragging');
+    listEl.insertBefore(li, placeholder);
+    placeholder.remove();
+
+    const orderedIds = [...listEl.querySelectorAll('.item-card')].map(el => el.dataset.id);
+    const arr = months[activeMonth] || [];
+    const byId = Object.fromEntries(arr.map(it => [it.id, it]));
+    months[activeMonth] = orderedIds.map(id => byId[id]).filter(Boolean);
+
+    dragState = null;
+    renderItems();
+    await saveState();
+  }
+
+  // ---------- Init ----------
+  (async function init(){
+    await loadState();
+    renderAll();
+    loadingOverlay.style.opacity = '0';
+    setTimeout(() => loadingOverlay.style.display = 'none', 300);
+  })();
+})();
+</script>
+</body>
+</html>
